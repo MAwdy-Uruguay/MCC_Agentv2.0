@@ -12,35 +12,36 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
 
     fun getApiService(context: Context): IApiService {
+        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
+        ApiConfig.prefs = prefs // 💡 lo guardamos en ApiConfig por si se usa ahí
+
+        val baseUrl = prefs.getString("base_url", ApiConfig.defaultBaseUrl) ?: ApiConfig.defaultBaseUrl
+
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+
         val client = OkHttpClient.Builder()
             .addInterceptor(logging)
             .addInterceptor { chain ->
-                val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
                 val token = prefs.getString("token", null)
-                Log.d("RetrofitClient", "\uD83E\uDDEA Token utilizado: $token")
-
                 val request = chain.request().newBuilder().apply {
                     if (!token.isNullOrEmpty()) {
                         addHeader("Authorization", "Bearer $token")
                     }
                 }.build()
-
                 chain.proceed(request)
             }
             .build()
 
         return Retrofit.Builder()
-            .baseUrl(ApiConfig.BASE_URL)
+            .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(IApiService::class.java)
     }
-
-    fun getApiWithValidToken(context: Context): IApiService {
+    suspend fun getApiWithValidToken(context: Context): IApiService {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         var token = prefs.getString("token", null)
 
@@ -56,7 +57,6 @@ object RetrofitClient {
 
         return getApiService(context)
     }
-
     private fun isTokenExpired(token: String): Boolean {
         return try {
             val parts = token.split(".")
@@ -71,29 +71,43 @@ object RetrofitClient {
             true
         }
     }
-
-    private fun renewToken(context: Context): String? {
+    suspend fun renewToken(context: Context): String? {
         return try {
             val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             val oldToken = prefs.getString("token", null)
-            val url = java.net.URL("${ApiConfig.BASE_URL}auth/renew")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("Authorization", "Bearer $oldToken")
-            conn.connectTimeout = 5000
 
-            val response = try {
-                conn.inputStream.bufferedReader().readText()
-            } catch (e: Exception) {
-                conn.errorStream?.bufferedReader()?.readText() ?: throw e
+            val tempClient = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $oldToken")
+                        .build()
+                    chain.proceed(request)
+                }
+                .build()
+
+            val tempRetrofit = Retrofit.Builder()
+                .baseUrl(ApiConfig.defaultBaseUrl)
+                .client(tempClient)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val service = tempRetrofit.create(IApiService::class.java)
+            val response = service.renewToken()
+
+            if (response.isSuccessful) {
+                val newToken = response.body()?.token
+                if (!newToken.isNullOrBlank()) {
+                    prefs.edit().putString("token", newToken).apply()
+                    Log.d("RetrofitClient", "🔁 Token renovado: $newToken")
+                    return newToken
+                }
             }
 
-            val regex = """"token"\s*:\s*"(.+?)""".toRegex()
-            val match = regex.find(response) ?: return null
-            match.groupValues[1]
+            null
         } catch (e: Exception) {
-            Log.e("RetrofitClient", "\uD83D\uDCA5 Error al renovar token: ${e.message}", e)
-            return null
+            Log.e("RetrofitClient", "💥 Error renovando token con Retrofit", e)
+            null
         }
     }
+
 }

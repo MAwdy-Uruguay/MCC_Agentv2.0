@@ -1,9 +1,11 @@
 package com.example.mccagent.services
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.IBinder
 import android.telephony.SmsManager
 import android.util.Log
@@ -19,20 +21,13 @@ class SMSService : Service() {
     private val CHANNEL_ID = "MCCAgentSMSChannel"
     private lateinit var messageRepository: MessageRepositoryImpl
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var isRunning = false
+
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-
         messageRepository = MessageRepositoryImpl(this)
-
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MCC Agent activo")
-            .setContentText("Enviando mensajes SMS pendientes")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .build()
-
-        startForeground(1, notification)
 
         ContextCompat.registerReceiver(
             this,
@@ -41,47 +36,80 @@ class SMSService : Service() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        scope.launch {
-            while (true) {
-                try {
-                    val messages = messageRepository.getPendingMessages()
-                    Log.d("SMSService", "\uD83D\uDCE5 Mensajes obtenidos: ${messages.size}")
-                    val packageManager = packageManager
-                    val hasSms = packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
-                    Log.d("SMSService", "¿Puede enviar SMS? $hasSms")
-                    messages.forEach {
-                        Log.d("SMSService", "➡ Enviando SMS a ${it.recipient} con mid: ${it.mid}")
-                        sendSMS(it.mid, it.recipient, it.body)
-                        delay(2000)
-                    }
-                } catch (e: Exception) {
-                    Log.e("MCCAgent", "Error: ${e.message}")
-                }
-                delay(10000)
-            }
-        }
 
         getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean("sms_service_running", true).apply()
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("SMSService", "🚀 Servicio iniciado")
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("MCC Agent activo")
+            .setContentText("Enviando mensajes SMS pendientes")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .build()
+
+        startForeground(1, notification)
+
+        if (!isRunning) {
+            isRunning = true
+            scope.launch {
+                while (true) {
+                    try {
+                        val hasSms = packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+                        if (!hasSms) {
+                            Log.w("SMSService", "🚫 Dispositivo no soporta SMS")
+                            delay(10000)
+                            continue
+                        }
+
+                        val messages = messageRepository.getPendingMessages()
+                        Log.d("SMSService", "📨 Mensajes pendientes: ${messages.size}")
+
+                        for (msg in messages) {
+                            sendSMS(msg.mid, msg.recipient, msg.body)
+                            delay(2000)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SMSService", "❌ Error en loop de envío: ${e.message}")
+                    }
+
+                    delay(10000)
+                }
+            }
+        }
+
+        return START_STICKY
+    }
+
     override fun onDestroy() {
-        unregisterReceiver(smsSentReceiver)
+        try {
+            unregisterReceiver(smsSentReceiver)
+        } catch (_: Exception) {}
+
         scope.cancel()
+        isRunning = false
         getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean("sms_service_running", false).apply()
+
+        Log.d("SMSService", "🛑 Servicio detenido")
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "MCC Agent SMS Channel",
-            NotificationManager.IMPORTANCE_LOW
-        )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "MCC Agent SMS Channel",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
+        }
     }
 
     private fun sendSMS(mid: String, phone: String, body: String) {
@@ -92,27 +120,18 @@ class SMSService : Service() {
         )
 
         try {
-            Log.d("SMSService", "\uD83D\uDCEC Preparando envío a: $phone | Contenido: $body")
-            Log.d("SMSService", "Intentando enviar a $phone con texto: $body")
-
             SmsManager.getDefault().sendTextMessage(phone, null, body, sentIntent, null)
-            Log.i("MCCAgent", "\uD83D\uDCE4 Enviando SMS a $phone (pendiente confirmación)")
-            Log.d("SMSService", "Permiso SEND_SMS: ${
-                ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            }")
+            Log.i("SMSService", "✉️ Enviado a $phone (pendiente confirmación)")
         } catch (e: Exception) {
-            Log.e("MCCAgent", "❌ Error al enviar SMS: ${e.message}")
+            Log.e("SMSService", "❌ Error al enviar SMS: ${e.message}")
         }
     }
 
     private val smsSentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val mid = intent.getStringExtra("mid") ?: run {
-                Log.e("SMSService", "❌ MID faltante en Intent")
-                return
-            }
-            val resultado = resultCode
-            val status = when (resultado) {
+            val mid = intent.getStringExtra("mid") ?: return
+            val resultCode = resultCode
+            val status = when (resultCode) {
                 Activity.RESULT_OK -> "ENVIADO"
                 SmsManager.RESULT_ERROR_GENERIC_FAILURE,
                 SmsManager.RESULT_ERROR_NO_SERVICE,
@@ -121,17 +140,16 @@ class SMSService : Service() {
                 else -> "FALLIDO"
             }
 
-            Log.d("SMSService", "\uD83D\uDCE1 resultCode recibido: $resultCode → status: $status")
-
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val repo = MessageRepositoryImpl(context)
-                    val result = repo.updateMessageStatus(mid, status)
-                    Log.i("SMSService", "✅ Estado actualizado a '$status' para mensaje $mid: $result")
+                    repo.updateMessageStatus(mid, status)
+                    Log.i("SMSService", "✅ Estado actualizado: $mid -> $status")
                 } catch (e: Exception) {
-                    Log.e("SMSService", "\uD83D\uDCA5 Error en updateMessageStatus: ${e.message}", e)
+                    Log.e("SMSService", "❌ Error en updateMessageStatus: ${e.message}", e)
                 }
             }
         }
     }
 }
+

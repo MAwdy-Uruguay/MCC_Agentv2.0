@@ -1,4 +1,5 @@
 package com.example.mccagent.models.interfaces
+import com.example.mccagent.data.AuthResponse
 import com.example.mccagent.data.ClientWithDevicesResponse
 import com.example.mccagent.data.DeviceRegisterRequest
 import com.example.mccagent.data.LoginResponse
@@ -41,4 +42,8 @@ interface IApiService {
         @Path("id") messageId: String,
         @Body status: MessageStatusUpdateRequest
     ): Response<Unit>
+
+    @GET("auth/renew")
+    suspend fun renewToken(): Response<AuthResponse>
+
 }

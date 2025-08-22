@@ -1,16 +1,24 @@
 package com.example.mccagent.config
 
-object ApiConfig {
+import android.content.SharedPreferences
 
+object ApiConfig {
     enum class Environment {
         DEV, PROD
     }
 
-    private val currentEnv = Environment.DEV
+    val currentEnv: Environment
+        get() = Environment.valueOf(
+            prefs?.getString("env", "DEV") ?: "DEV"
+        )
 
-    val BASE_URL: String
+    // Esto se usa como fallback si no hay una base_url guardada por el usuario
+    val defaultBaseUrl: String
         get() = when (currentEnv) {
             Environment.DEV -> "http://192.168.1.16:5000/api/"
             Environment.PROD -> "https://tu-backend-real.com/api/"
         }
+
+    // Esto se inyecta desde el Application o RetrofitClient
+    var prefs: SharedPreferences? = null
 }
