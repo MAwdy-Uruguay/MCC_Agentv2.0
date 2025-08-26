@@ -79,10 +79,8 @@ class MainActivity : ComponentActivity() {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         prefs.edit().remove("token").apply()
 
-
         val stopIntent = Intent(context, SMSService::class.java)
         context.stopService(stopIntent)
-
 
     }
 }

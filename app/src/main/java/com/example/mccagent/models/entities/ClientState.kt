@@ -6,8 +6,10 @@ data class ClientState(
     val isLoading: Boolean = false,
     val clientName: String = "",
     val clientContact: String ="",
-    val clientStatus: Boolean = true,
+    val status: Boolean = true,
     val devices: List<Device> = emptyList(),
     val error: String? = null
 )
-
+//val clientName: String = "",
+//val clientContact: String ="",
+//val clientStatus: Boolean = true,

@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.models.interfaces.IApiService
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -45,7 +46,7 @@ object RetrofitClient {
         var token = prefs.getString("token", null)
 
         if (token.isNullOrBlank() || isTokenExpired(token)) {
-            token = renewToken(context)
+            token = renewTokenWithOkHttp(context)
             if (!token.isNullOrBlank()) {
                 prefs.edit().putString("token", token).apply()
                 Log.d("RetrofitClient", "\uD83D\uDD10 Token renovado y guardado: $token")
@@ -66,34 +67,35 @@ object RetrofitClient {
             val match = regex.find(payload) ?: return true
             val exp = match.groupValues[1].toLong()
             val now = System.currentTimeMillis() / 1000
+            Log.d("TokenCheck", "Token expira en: $exp, ahora: $now")
             exp < now
+
         } catch (e: Exception) {
             true
         }
     }
 
-    private fun renewToken(context: Context): String? {
+    private fun renewTokenWithOkHttp(context: Context): String? {
         return try {
             val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             val oldToken = prefs.getString("token", null)
-            val url = java.net.URL("${ApiConfig.BASE_URL}auth/renew")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("Authorization", "Bearer $oldToken")
-            conn.connectTimeout = 5000
 
-            val response = try {
-                conn.inputStream.bufferedReader().readText()
-            } catch (e: Exception) {
-                conn.errorStream?.bufferedReader()?.readText() ?: throw e
-            }
+            val request = Request.Builder()
+                .url("${ApiConfig.BASE_URL}auth/renew")
+                .addHeader("Authorization", "Bearer $oldToken")
+                .get()
+                .build()
+
+            val response = OkHttpClient().newCall(request).execute()
+            val body = response.body?.string() ?: return null
 
             val regex = """"token"\s*:\s*"(.+?)""".toRegex()
-            val match = regex.find(response) ?: return null
+            val match = regex.find(body) ?: return null
             match.groupValues[1]
         } catch (e: Exception) {
-            Log.e("RetrofitClient", "\uD83D\uDCA5 Error al renovar token: ${e.message}", e)
-            return null
+            Log.e("RetrofitClient", "💥 Error al renovar token: ${e.message}", e)
+            null
         }
     }
+
 }

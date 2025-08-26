@@ -35,7 +35,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     username = "aleybru@gmail.com"
-    password = "PapuDani.1203"
+    password = "Dani.1203"
     var isProd by remember { mutableStateOf(false) }
 
     // ✅ Cargar preferencia inicial

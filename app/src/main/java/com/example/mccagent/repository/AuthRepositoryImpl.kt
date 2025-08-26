@@ -14,4 +14,8 @@ class AuthRepositoryImpl(
     override suspend fun login(request: LoginRequest): Response<LoginResponse> {
         return apiService.login(request)
     }
+
+    override suspend fun renew(): Response<LoginResponse> {
+        return apiService.renew()
+    }
 }

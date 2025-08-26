@@ -4,5 +4,5 @@ data class UserData(
     val uid: String,
     val fullname: String,
     val username: String,
-    val role: String
+    val role: RoleData
 )

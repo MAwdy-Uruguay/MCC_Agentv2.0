@@ -21,6 +21,9 @@ interface IApiService {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
+    @GET("auth/renew")
+    suspend fun renew(): Response<LoginResponse>
+
     @GET("clients/me")
     suspend fun getClient(): Response<Client>
 
