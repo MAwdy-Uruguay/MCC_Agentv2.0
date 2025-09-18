@@ -2,26 +2,41 @@ package com.example.mccagent.network
 
 import android.content.Context
 import android.util.Log
+import com.example.mccagent.R
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.models.interfaces.IApiService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 object RetrofitClient {
 
     fun getApiService(context: Context): IApiService {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        ApiConfig.prefs = prefs // 💡 lo guardamos en ApiConfig por si se usa ahí
+        ApiConfig.prefs = prefs
 
-        val baseUrl = prefs.getString("base_url", ApiConfig.defaultBaseUrl) ?: ApiConfig.defaultBaseUrl
+        val baseUrl = ApiConfig.getBaseUrl(context)
+        val currentEnv = ApiConfig.getEnv(context) // DEV | PRE | PROD
 
+        // Logging
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        val client = OkHttpClient.Builder()
+        // 🔑 Seleccionar el certificado según el ambiente
+        val certResId = when (currentEnv) {
+            "DEV" -> R.raw.dev_cert
+            "PRE" -> R.raw.mccserverca  // agregalo en res/raw
+            else -> R.raw.mccserverca // PROD debería usar un cert público válido
+        }
+
+        val clientBuilder = OkHttpClient.Builder()
             .addInterceptor(logging)
             .addInterceptor { chain ->
                 val token = prefs.getString("token", null)
@@ -32,7 +47,30 @@ object RetrofitClient {
                 }.build()
                 chain.proceed(request)
             }
-            .build()
+
+        if (certResId != null) {
+            // 💡 Cargar el certificado desde res/raw
+            val cf = CertificateFactory.getInstance("X.509")
+            context.resources.openRawResource(certResId).use { caInput ->
+                val ca = cf.generateCertificate(caInput)
+
+                val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+                keyStore.load(null, null)
+                keyStore.setCertificateEntry("papu_ca", ca)
+
+                val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+                tmf.init(keyStore)
+                val trustManager = tmf.trustManagers[0] as X509TrustManager
+
+                val sslContext = SSLContext.getInstance("TLS")
+                sslContext.init(null, arrayOf(trustManager), null)
+
+                clientBuilder.sslSocketFactory(sslContext.socketFactory, trustManager)
+                clientBuilder.hostnameVerifier { _, _ -> true }
+            }
+        }
+
+        val client = clientBuilder.build()
 
         return Retrofit.Builder()
             .baseUrl(baseUrl)
@@ -41,6 +79,7 @@ object RetrofitClient {
             .build()
             .create(IApiService::class.java)
     }
+
     suspend fun getApiWithValidToken(context: Context): IApiService {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         var token = prefs.getString("token", null)
@@ -86,7 +125,7 @@ object RetrofitClient {
                 .build()
 
             val tempRetrofit = Retrofit.Builder()
-                .baseUrl(ApiConfig.defaultBaseUrl)
+                .baseUrl(ApiConfig.getBaseUrl(context))
                 .client(tempClient)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()

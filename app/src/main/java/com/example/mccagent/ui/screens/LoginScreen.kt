@@ -34,7 +34,7 @@ fun LoginScreen(
     val scope = rememberCoroutineScope()
 
     var username by remember { mutableStateOf("aleybru@gmail.com") }
-    var password by remember { mutableStateOf("Daniman.1203") }
+    var password by remember { mutableStateOf("Dani.1203") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isProd by remember { mutableStateOf(false) }
 

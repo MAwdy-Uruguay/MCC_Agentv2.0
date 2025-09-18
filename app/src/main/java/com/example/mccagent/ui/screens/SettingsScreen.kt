@@ -16,14 +16,22 @@ import androidx.navigation.NavController
 @Composable
 fun SettingsScreen(navController: NavController, context: Context) {
     val context = LocalContext.current
-    var baseUrl by remember { mutableStateOf("") }
-    var isProd by remember { mutableStateOf(false) }
+    val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
 
-    // 🔄 Cargar valores desde SharedPreferences
+    // Estados para cada URL
+    var prodUrl by remember { mutableStateOf("") }
+    var preprodUrl by remember { mutableStateOf("") }
+    var devUrl by remember { mutableStateOf("") }
+
+    // Estado para el entorno seleccionado
+    var selectedEnv by remember { mutableStateOf("DEV") }
+
+    // Cargar valores guardados al abrir pantalla
     LaunchedEffect(Unit) {
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        baseUrl = prefs.getString("base_url", "http://192.168.8.151:5000/api/") ?: ""
-        isProd = prefs.getString("env", "DEV") == "PROD"
+        prodUrl = prefs.getString("url_prod","")!!
+        preprodUrl = prefs.getString("url_preprod","https://suy002001-dev/mccserver-dev/api/")!!
+        devUrl = prefs.getString("url_dev","https://localhost/novalid/api/")!!
+        selectedEnv = prefs.getString("env", "DEV") ?: "DEV"
     }
 
     Scaffold(
@@ -46,44 +54,84 @@ fun SettingsScreen(navController: NavController, context: Context) {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
+            // Producción
             OutlinedTextField(
-                value = baseUrl,
-                onValueChange = { baseUrl = it },
-                label = { Text("URL base del API") },
+                value = prodUrl,
+                onValueChange = { prodUrl = it },
+                label = { Text("🌐 URL Producción") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Modo Producción")
-                Switch(
-                    checked = isProd,
-                    onCheckedChange = { isProd = it }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedEnv == "PROD",
+                    onClick = { selectedEnv = "PROD" }
                 )
+                Text("Usar Producción")
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // Preproducción
+            OutlinedTextField(
+                value = preprodUrl,
+                onValueChange = { preprodUrl = it },
+                label = { Text("🛠 URL Preproducción") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedEnv == "PREPROD",
+                    onClick = { selectedEnv = "PREPROD" }
+                )
+                Text("Usar Preproducción")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Desarrollo
+            OutlinedTextField(
+                value = devUrl,
+                onValueChange = { devUrl = it },
+                label = { Text("💻 URL Desarrollo") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedEnv == "DEV",
+                    onClick = { selectedEnv = "DEV" }
+                )
+                Text("Usar Desarrollo")
+            }
+
+            Spacer(Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
                     prefs.edit()
-                        .putString("base_url", baseUrl)
-                        .putString("env", if (isProd) "PROD" else "DEV")
+                        .putString("url_prod", prodUrl)
+                        .putString("url_preprod", preprodUrl)
+                        .putString("url_dev", devUrl)
+                        .putString("env", selectedEnv)
+                        // guardar también la url activa según env
+                        .putString(
+                            "base_url",
+                            when (selectedEnv) {
+                                "PROD" -> prodUrl
+                                "PREPROD" -> preprodUrl
+                                else -> devUrl
+                            }
+                        )
                         .apply()
-
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("💾 Guardar cambios")
+                Text("💾 Guardar configuración")
             }
         }
     }
 }
+

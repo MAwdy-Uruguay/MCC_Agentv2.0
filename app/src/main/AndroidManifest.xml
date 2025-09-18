@@ -29,6 +29,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MCCAgent"
         android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="34">
 
         <!-- 🧩 Actividad principal -->
@@ -58,6 +59,10 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".services.SmsSentReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 </manifest>

@@ -20,15 +20,13 @@ class ClientViewModel(private val repository: IClientRepository) : ViewModel() {
             _clientState.value = _clientState.value.copy(isLoading = true)
 
             try {
-//                val clientResponse = repository.getClient()
-//                val devicesResponse = repository.getDevices()
                 val clientResponse = repository.getClientWithDevices()
                 if (clientResponse.isSuccessful && clientResponse.body()?.ok == true) {
                     val client = clientResponse.body()!!.client
                     _clientState.value = ClientState(
                         isLoading = false,
                         clientName = client.name,
-                        clientContact = client.contact_email,
+                        clientContact = client.contact_Email,
                         clientStatus = client.status,
                         devices = client.devices
                     )
