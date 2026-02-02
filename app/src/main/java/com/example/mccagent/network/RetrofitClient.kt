@@ -22,7 +22,7 @@ object RetrofitClient {
         ApiConfig.prefs = prefs
 
         val baseUrl = ApiConfig.getBaseUrl(context)
-        val currentEnv = ApiConfig.getEnv(context) // DEV | PRE | PROD
+        val currentEnv = ApiConfig.getEnv(context) // DEV | PREPROD | PROD
 
         // Logging
         val logging = HttpLoggingInterceptor().apply {
@@ -32,7 +32,7 @@ object RetrofitClient {
         // 🔑 Seleccionar el certificado según el ambiente
         val certResId = when (currentEnv) {
             "DEV" -> R.raw.dev_cert
-            "PRE" -> R.raw.mccserverca  // agregalo en res/raw
+            "PREPROD" -> R.raw.mccserverca  // agregalo en res/raw
             else -> R.raw.mccserverca // PROD debería usar un cert público válido
         }
 
