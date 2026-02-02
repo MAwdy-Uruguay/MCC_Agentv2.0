@@ -2,51 +2,90 @@ package com.example.mccagent.network
 
 import android.content.Context
 import android.util.Log
+import com.example.mccagent.R
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.models.interfaces.IApiService
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 object RetrofitClient {
 
     fun getApiService(context: Context): IApiService {
+        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
+        ApiConfig.prefs = prefs
+
+        val baseUrl = ApiConfig.getBaseUrl(context)
+        val currentEnv = ApiConfig.getEnv(context) // DEV | PRE | PROD
+
+        // Logging
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        val client = OkHttpClient.Builder()
+
+        // 🔑 Seleccionar el certificado según el ambiente
+        val certResId = when (currentEnv) {
+            "DEV" -> R.raw.dev_cert
+            "PRE" -> R.raw.mccserverca  // agregalo en res/raw
+            else -> R.raw.mccserverca // PROD debería usar un cert público válido
+        }
+
+        val clientBuilder = OkHttpClient.Builder()
             .addInterceptor(logging)
             .addInterceptor { chain ->
-                val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
                 val token = prefs.getString("token", null)
-                Log.d("RetrofitClient", "\uD83E\uDDEA Token utilizado: $token")
-
                 val request = chain.request().newBuilder().apply {
                     if (!token.isNullOrEmpty()) {
                         addHeader("Authorization", "Bearer $token")
                     }
                 }.build()
-
                 chain.proceed(request)
             }
-            .build()
+
+        if (certResId != null) {
+            // 💡 Cargar el certificado desde res/raw
+            val cf = CertificateFactory.getInstance("X.509")
+            context.resources.openRawResource(certResId).use { caInput ->
+                val ca = cf.generateCertificate(caInput)
+
+                val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+                keyStore.load(null, null)
+                keyStore.setCertificateEntry("papu_ca", ca)
+
+                val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+                tmf.init(keyStore)
+                val trustManager = tmf.trustManagers[0] as X509TrustManager
+
+                val sslContext = SSLContext.getInstance("TLS")
+                sslContext.init(null, arrayOf(trustManager), null)
+
+                clientBuilder.sslSocketFactory(sslContext.socketFactory, trustManager)
+                clientBuilder.hostnameVerifier { _, _ -> true }
+            }
+        }
+
+        val client = clientBuilder.build()
 
         return Retrofit.Builder()
-            .baseUrl(ApiConfig.BASE_URL)
+            .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(IApiService::class.java)
     }
 
-    fun getApiWithValidToken(context: Context): IApiService {
+    suspend fun getApiWithValidToken(context: Context): IApiService {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         var token = prefs.getString("token", null)
 
         if (token.isNullOrBlank() || isTokenExpired(token)) {
-            token = renewTokenWithOkHttp(context)
+            token = renewToken(context)
             if (!token.isNullOrBlank()) {
                 prefs.edit().putString("token", token).apply()
                 Log.d("RetrofitClient", "\uD83D\uDD10 Token renovado y guardado: $token")
@@ -57,7 +96,6 @@ object RetrofitClient {
 
         return getApiService(context)
     }
-
     private fun isTokenExpired(token: String): Boolean {
         return try {
             val parts = token.split(".")
@@ -67,33 +105,46 @@ object RetrofitClient {
             val match = regex.find(payload) ?: return true
             val exp = match.groupValues[1].toLong()
             val now = System.currentTimeMillis() / 1000
-            Log.d("TokenCheck", "Token expira en: $exp, ahora: $now")
             exp < now
-
         } catch (e: Exception) {
             true
         }
     }
-
-    private fun renewTokenWithOkHttp(context: Context): String? {
+    suspend fun renewToken(context: Context): String? {
         return try {
             val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             val oldToken = prefs.getString("token", null)
 
-            val request = Request.Builder()
-                .url("${ApiConfig.BASE_URL}auth/renew")
-                .addHeader("Authorization", "Bearer $oldToken")
-                .get()
+            val tempClient = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $oldToken")
+                        .build()
+                    chain.proceed(request)
+                }
                 .build()
 
-            val response = OkHttpClient().newCall(request).execute()
-            val body = response.body?.string() ?: return null
+            val tempRetrofit = Retrofit.Builder()
+                .baseUrl(ApiConfig.getBaseUrl(context))
+                .client(tempClient)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
 
-            val regex = """"token"\s*:\s*"(.+?)""".toRegex()
-            val match = regex.find(body) ?: return null
-            match.groupValues[1]
+            val service = tempRetrofit.create(IApiService::class.java)
+            val response = service.renewToken()
+
+            if (response.isSuccessful) {
+                val newToken = response.body()?.token
+                if (!newToken.isNullOrBlank()) {
+                    prefs.edit().putString("token", newToken).apply()
+                    Log.d("RetrofitClient", "🔁 Token renovado: $newToken")
+                    return newToken
+                }
+            }
+
+            null
         } catch (e: Exception) {
-            Log.e("RetrofitClient", "💥 Error al renovar token: ${e.message}", e)
+            Log.e("RetrofitClient", "💥 Error renovando token con Retrofit", e)
             null
         }
     }

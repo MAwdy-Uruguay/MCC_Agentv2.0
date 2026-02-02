@@ -2,9 +2,14 @@ package com.example.mccagent.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -14,14 +19,11 @@ import com.example.mccagent.repository.AuthRepositoryImpl
 import com.example.mccagent.network.RetrofitClient
 import com.example.mccagent.data.LoginRequest
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onOpenSettings: () -> Unit = {} // ← Callback para ir a Configuración
 ) {
     val context = LocalContext.current
     val viewModel: AuthViewModel = viewModel(
@@ -31,14 +33,12 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("aleybru@gmail.com") }
+    var password by remember { mutableStateOf("Dani.1203") }
     var passwordVisible by remember { mutableStateOf(false) }
-    username = "aleybru@gmail.com"
-    password = "Dani.1203"
     var isProd by remember { mutableStateOf(false) }
 
-    // ✅ Cargar preferencia inicial
+    // 🔄 Cargar preferencia de entorno
     LaunchedEffect(Unit) {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         isProd = prefs.getString("env", "DEV") == "PROD"
@@ -47,15 +47,18 @@ fun LoginScreen(
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Success -> {
-                val token = (authState as AuthState.Success).response.token
+                val response = authState as AuthState.Success
+                val token = response.response.token
+
+                val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
+                prefs.edit().putString("token", token).apply()
 
                 scope.launch {
-                    snackbarHostState.showSnackbar("✅ Bienvenido, ${(authState as AuthState.Success).response.user.fullname}")
+                    snackbarHostState.showSnackbar("✅ Bienvenido, ${response.response.user.fullname}")
                 }
+
                 viewModel.resetState()
                 onLoginSuccess()
-                val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putString("token", (authState as AuthState.Success).response.token).apply()
             }
 
             is AuthState.Error -> {
@@ -70,7 +73,12 @@ fun LoginScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onOpenSettings) {
+                Icon(Icons.Default.Settings, contentDescription = "Configuración")
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -104,7 +112,10 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text("Modo Producción")
                 Switch(
                     checked = isProd,

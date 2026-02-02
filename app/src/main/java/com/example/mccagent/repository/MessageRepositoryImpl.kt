@@ -7,16 +7,19 @@ import com.example.mccagent.models.interfaces.IMessageRepository
 import com.example.mccagent.models.entities.Message
 import com.example.mccagent.models.interfaces.IApiService
 import com.example.mccagent.network.RetrofitClient
+import com.example.mccagent.network.RetrofitClient.getApiWithValidToken
 import retrofit2.Response
 
 class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
 
-    val api = RetrofitClient.getApiWithValidToken(context)
-
+    private suspend fun getApi(): IApiService {
+        return RetrofitClient.getApiWithValidToken(context) // ✅ ACÁ SÍ puede usarse suspend
+    }
+   // val api = RetrofitClient.getApiWithValidToken(context)
 
     override suspend fun getPendingMessages(): List<Message> {
         return try {
-            val response = api.getPendingMessages()
+            val response = getApi().getPendingMessages()
             if (response.isSuccessful) {
                 response.body()?.messages ?: emptyList()
             } else {
@@ -31,7 +34,7 @@ class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
 
     override suspend fun updateMessageStatus(mid: String, status: String): Boolean {
         return try {
-            val response = api.updateMessageStatus(mid, MessageStatusUpdateRequest(status))
+            val response = getApi().updateMessageStatus(mid, MessageStatusUpdateRequest(status))
             response.isSuccessful
         } catch (e: Exception) {
             Log.e("MessageRepo", "💥 Excepción al actualizar estado: ${e.message}")

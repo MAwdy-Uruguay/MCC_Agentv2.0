@@ -27,7 +27,7 @@ class ClientViewModel(private val repository: IClientRepository) : ViewModel() {
                         isLoading = false,
                         clientName = client.name,
                         clientContact = client.contact_Email,
-                        status = client.active,
+                        clientStatus = client.status,
                         devices = client.devices
                     )
                 } else {

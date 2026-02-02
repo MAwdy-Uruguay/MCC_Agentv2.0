@@ -17,9 +17,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.example.mccagent.services.SMSService
-import com.example.mccagent.ui.screens.AppNavigation
 import com.example.mccagent.ui.theme.MCCAgentTheme
 import android.util.Log
+import com.example.mccagent.config.ApiConfig
+import com.example.mccagent.ui.navigation.AppNavigation
 
 class MainActivity : ComponentActivity() {
     private val permisos = arrayOf(
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
+        ApiConfig.prefs = getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         requestPermissionsIfNeeded()
 
         setContent {
