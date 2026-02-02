@@ -31,9 +31,14 @@ class ClientViewModel(private val repository: IClientRepository) : ViewModel() {
                         devices = client.devices
                     )
                 } else {
+                    val errorMessage = when (clientResponse.code()) {
+                        401, 403 -> "Sesión expirada. Iniciá sesión nuevamente."
+                        404 -> "Cliente no encontrado."
+                        else -> "Error al obtener datos del servidor"
+                    }
                     _clientState.value = ClientState(
                         isLoading = false,
-                        error = "Error al obtener datos del servidor"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {

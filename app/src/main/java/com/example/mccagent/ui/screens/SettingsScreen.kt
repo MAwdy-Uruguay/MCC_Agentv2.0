@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import android.util.Patterns
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,15 @@ fun SettingsScreen(navController: NavController, context: Context) {
         devUrl = prefs.getString("url_dev","https://localhost/novalid/api/")!!
         selectedEnv = prefs.getString("env", "DEV") ?: "DEV"
     }
+
+    fun isValidUrl(value: String): Boolean {
+        return value.isNotBlank() && Patterns.WEB_URL.matcher(value).matches()
+    }
+
+    val prodUrlError = prodUrl.isNotBlank() && !isValidUrl(prodUrl)
+    val preprodUrlError = preprodUrl.isNotBlank() && !isValidUrl(preprodUrl)
+    val devUrlError = devUrl.isNotBlank() && !isValidUrl(devUrl)
+    val hasAnyError = prodUrlError || preprodUrlError || devUrlError
 
     Scaffold(
         topBar = {
@@ -60,7 +70,13 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { prodUrl = it },
                 label = { Text("🌐 URL Producción") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = prodUrlError,
+                supportingText = {
+                    if (prodUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
@@ -78,7 +94,13 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { preprodUrl = it },
                 label = { Text("🛠 URL Preproducción") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = preprodUrlError,
+                supportingText = {
+                    if (preprodUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
@@ -96,7 +118,13 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { devUrl = it },
                 label = { Text("💻 URL Desarrollo") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = devUrlError,
+                supportingText = {
+                    if (devUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
@@ -107,6 +135,18 @@ fun SettingsScreen(navController: NavController, context: Context) {
             }
 
             Spacer(Modifier.height(24.dp))
+
+            val activeUrl = when (selectedEnv) {
+                "PROD" -> prodUrl
+                "PREPROD" -> preprodUrl
+                else -> devUrl
+            }
+            Text(
+                text = "URL activa: $activeUrl",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Button(
                 onClick = {
@@ -127,11 +167,11 @@ fun SettingsScreen(navController: NavController, context: Context) {
                         .apply()
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !hasAnyError
             ) {
                 Text("💾 Guardar configuración")
             }
         }
     }
 }
-
