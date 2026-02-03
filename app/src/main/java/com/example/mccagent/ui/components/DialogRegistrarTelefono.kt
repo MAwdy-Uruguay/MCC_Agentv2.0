@@ -1,9 +1,5 @@
 package com.example.mccagent.ui.components
 
-import android.app.Activity
-import android.content.Context
-import android.os.Build
-import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +16,11 @@ fun DialogRegistrarTelefono(
     val context = LocalContext.current
     var numero by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+
+    fun isValidPhone(input: String): Boolean {
+        val cleaned = input.replace(" ", "")
+        return cleaned.matches(Regex("^\\+?\\d{6,15}$"))
+    }
 
     AlertDialog(
         onDismissRequest = { onDismiss() },
@@ -43,12 +44,12 @@ fun DialogRegistrarTelefono(
         },
         confirmButton = {
             TextButton(onClick = {
-                if (numero.isBlank()) {
-                    error = "Debe ingresar un número válido"
+                if (!isValidPhone(numero)) {
+                    error = "Debe ingresar un número válido (6 a 15 dígitos)"
                 } else {
                     registrarEsteDispositivo(
                         context = context,
-                        numero = numero,
+                        numero = numero.replace(" ", ""),
                         onSuccess = onSuccess,
                         onError = {
                             error = it
