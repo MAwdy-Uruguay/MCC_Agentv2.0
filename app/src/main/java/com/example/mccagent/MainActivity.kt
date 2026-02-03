@@ -2,9 +2,7 @@ package com.example.mccagent
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,11 +11,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import com.example.mccagent.services.SMSService
 import com.example.mccagent.utils.SessionManager
+import com.example.mccagent.workers.SmsWorkScheduler
 import com.example.mccagent.ui.theme.MCCAgentTheme
 import android.util.Log
 import com.example.mccagent.config.ApiConfig
@@ -68,12 +65,7 @@ class MainActivity : ComponentActivity() {
 
     private fun iniciarServicioSMS() {
         Log.d("MainActivity", "🚀 Iniciando servicio SMS")
-        val intent = Intent(this, SMSService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        SmsWorkScheduler.schedule(this)
     }
 
     fun handleLogout(context: Context) {

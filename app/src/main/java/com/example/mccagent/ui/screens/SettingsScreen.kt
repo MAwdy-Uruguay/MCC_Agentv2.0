@@ -39,7 +39,11 @@ fun SettingsScreen(navController: NavController, context: Context) {
     }
 
     fun isValidUrl(value: String): Boolean {
-        return value.isNotBlank() && Patterns.WEB_URL.matcher(value).matches()
+        if (value.isBlank()) return false
+        if (value.startsWith("http://localhost") || value.startsWith("https://localhost")) {
+            return true
+        }
+        return Patterns.WEB_URL.matcher(value).matches()
     }
 
     val prodUrlError = prodUrl.isNotBlank() && !isValidUrl(prodUrl)

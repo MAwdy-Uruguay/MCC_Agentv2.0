@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mccagent.repository.ClientRepositoryImpl
+import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.utils.registrarEsteDispositivo
 import com.example.mccagent.viewmodels.ClientViewModel
 import com.example.mccagent.viewmodels.ClientViewModelFactory
@@ -30,6 +31,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +51,8 @@ fun HomeScreen(
 
     val serviceRunning = remember { mutableStateOf(false) }
     val lastSyncLabel = remember { mutableStateOf("Sin sincronización") }
+    val pendingCount = remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
 
     val state by viewModel.clientState.collectAsState()
     val currentDeviceId = remember { getCurrentDeviceId(context) }
@@ -57,6 +61,9 @@ fun HomeScreen(
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         serviceRunning.value = prefs.getBoolean("sms_service_running", false)
         viewModel.loadClientInfo()
+        scope.launch {
+            pendingCount.value = MessageRepositoryImpl(context).getPendingMessages().size
+        }
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         lastSyncLabel.value = "Última sincronización: ${formatter.format(Date())}"
     }
@@ -143,6 +150,10 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(lastSyncLabel.value, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "Pendientes: ${pendingCount.value}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = { refreshData() }
