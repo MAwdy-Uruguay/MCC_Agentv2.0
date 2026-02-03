@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.example.mccagent.services.SMSService
+import com.example.mccagent.utils.SessionManager
 import com.example.mccagent.ui.theme.MCCAgentTheme
 import android.util.Log
 import com.example.mccagent.config.ApiConfig
@@ -76,13 +77,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun handleLogout(context: Context) {
-
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        prefs.edit().remove("token").apply()
-
-        val stopIntent = Intent(context, SMSService::class.java)
-        context.stopService(stopIntent)
-
+        SessionManager.logout(context)
     }
 }
 
