@@ -10,6 +10,18 @@ object ApiConfig {
     const val defaultPreprodUrl = "https://suy002001-dev/mccserver-dev/api/"
     const val defaultDevUrl = "https://suy002001-dev/mccserver-dev/api/"
 
+    enum class Environment(val rawValue: String) {
+        DEV("DEV"),
+        PREPROD("PREPROD"),
+        PROD("PROD");
+
+        companion object {
+            fun fromRaw(value: String?): Environment {
+                return entries.firstOrNull { it.rawValue == value } ?: DEV
+            }
+        }
+    }
+
     fun getBaseUrl(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -17,16 +29,16 @@ object ApiConfig {
         val preprodUrl = prefs.getString("url_preprod", defaultPreprodUrl) ?: defaultPreprodUrl
         val devUrl = prefs.getString("url_dev", defaultDevUrl) ?: defaultDevUrl
 
-        return when (prefs.getString("env", "DEV")) {
-            "PROD" -> prodUrl
-            "PREPROD" -> preprodUrl
-            else -> devUrl
+        return when (getEnv(context)) {
+            Environment.PROD -> prodUrl
+            Environment.PREPROD -> preprodUrl
+            Environment.DEV -> devUrl
         }
     }
 
-    fun getEnv(context: Context): String? {
+    fun getEnv(context: Context): Environment {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString("env", "DEV")
+        return Environment.fromRaw(prefs.getString("env", Environment.DEV.rawValue))
     }
     var prefs: SharedPreferences? = null
 }

@@ -33,8 +33,8 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var username by remember { mutableStateOf("aleybru@gmail.com") }
-    var password by remember { mutableStateOf("Dani.1203") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isProd by remember { mutableStateOf(false) }
 

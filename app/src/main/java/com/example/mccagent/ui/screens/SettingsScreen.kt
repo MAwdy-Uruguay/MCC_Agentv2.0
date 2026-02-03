@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import android.util.Patterns
+import com.example.mccagent.config.ApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,15 +26,26 @@ fun SettingsScreen(navController: NavController, context: Context) {
     var devUrl by remember { mutableStateOf("") }
 
     // Estado para el entorno seleccionado
-    var selectedEnv by remember { mutableStateOf("DEV") }
+    var selectedEnv by remember { mutableStateOf(ApiConfig.Environment.DEV) }
 
     // Cargar valores guardados al abrir pantalla
     LaunchedEffect(Unit) {
         prodUrl = prefs.getString("url_prod","")!!
         preprodUrl = prefs.getString("url_preprod","https://suy002001-dev/mccserver-dev/api/")!!
         devUrl = prefs.getString("url_dev","https://localhost/novalid/api/")!!
-        selectedEnv = prefs.getString("env", "DEV") ?: "DEV"
+        selectedEnv = ApiConfig.Environment.fromRaw(
+            prefs.getString("env", ApiConfig.Environment.DEV.rawValue)
+        )
     }
+
+    fun isValidUrl(value: String): Boolean {
+        return value.isNotBlank() && Patterns.WEB_URL.matcher(value).matches()
+    }
+
+    val prodUrlError = prodUrl.isNotBlank() && !isValidUrl(prodUrl)
+    val preprodUrlError = preprodUrl.isNotBlank() && !isValidUrl(preprodUrl)
+    val devUrlError = devUrl.isNotBlank() && !isValidUrl(devUrl)
+    val hasAnyError = prodUrlError || preprodUrlError || devUrlError
 
     Scaffold(
         topBar = {
@@ -60,12 +73,18 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { prodUrl = it },
                 label = { Text("🌐 URL Producción") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = prodUrlError,
+                supportingText = {
+                    if (prodUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "PROD",
-                    onClick = { selectedEnv = "PROD" }
+                    selected = selectedEnv == ApiConfig.Environment.PROD,
+                    onClick = { selectedEnv = ApiConfig.Environment.PROD }
                 )
                 Text("Usar Producción")
             }
@@ -78,12 +97,18 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { preprodUrl = it },
                 label = { Text("🛠 URL Preproducción") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = preprodUrlError,
+                supportingText = {
+                    if (preprodUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "PREPROD",
-                    onClick = { selectedEnv = "PREPROD" }
+                    selected = selectedEnv == ApiConfig.Environment.PREPROD,
+                    onClick = { selectedEnv = ApiConfig.Environment.PREPROD }
                 )
                 Text("Usar Preproducción")
             }
@@ -96,17 +121,35 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 onValueChange = { devUrl = it },
                 label = { Text("💻 URL Desarrollo") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                isError = devUrlError,
+                supportingText = {
+                    if (devUrlError) {
+                        Text("URL inválida")
+                    }
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "DEV",
-                    onClick = { selectedEnv = "DEV" }
+                    selected = selectedEnv == ApiConfig.Environment.DEV,
+                    onClick = { selectedEnv = ApiConfig.Environment.DEV }
                 )
                 Text("Usar Desarrollo")
             }
 
             Spacer(Modifier.height(24.dp))
+
+            val activeUrl = when (selectedEnv) {
+                ApiConfig.Environment.PROD -> prodUrl
+                ApiConfig.Environment.PREPROD -> preprodUrl
+                ApiConfig.Environment.DEV -> devUrl
+            }
+            Text(
+                text = "URL activa: $activeUrl",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Button(
                 onClick = {
@@ -114,24 +157,24 @@ fun SettingsScreen(navController: NavController, context: Context) {
                         .putString("url_prod", prodUrl)
                         .putString("url_preprod", preprodUrl)
                         .putString("url_dev", devUrl)
-                        .putString("env", selectedEnv)
+                        .putString("env", selectedEnv.rawValue)
                         // guardar también la url activa según env
                         .putString(
                             "base_url",
                             when (selectedEnv) {
-                                "PROD" -> prodUrl
-                                "PREPROD" -> preprodUrl
-                                else -> devUrl
+                                ApiConfig.Environment.PROD -> prodUrl
+                                ApiConfig.Environment.PREPROD -> preprodUrl
+                                ApiConfig.Environment.DEV -> devUrl
                             }
                         )
                         .apply()
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !hasAnyError
             ) {
                 Text("💾 Guardar configuración")
             }
         }
     }
 }
-
