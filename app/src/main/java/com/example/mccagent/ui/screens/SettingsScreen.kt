@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import android.util.Patterns
+import com.example.mccagent.config.ApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,14 +26,16 @@ fun SettingsScreen(navController: NavController, context: Context) {
     var devUrl by remember { mutableStateOf("") }
 
     // Estado para el entorno seleccionado
-    var selectedEnv by remember { mutableStateOf("DEV") }
+    var selectedEnv by remember { mutableStateOf(ApiConfig.Environment.DEV) }
 
     // Cargar valores guardados al abrir pantalla
     LaunchedEffect(Unit) {
         prodUrl = prefs.getString("url_prod","")!!
         preprodUrl = prefs.getString("url_preprod","https://suy002001-dev/mccserver-dev/api/")!!
         devUrl = prefs.getString("url_dev","https://localhost/novalid/api/")!!
-        selectedEnv = prefs.getString("env", "DEV") ?: "DEV"
+        selectedEnv = ApiConfig.Environment.fromRaw(
+            prefs.getString("env", ApiConfig.Environment.DEV.rawValue)
+        )
     }
 
     fun isValidUrl(value: String): Boolean {
@@ -80,8 +83,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "PROD",
-                    onClick = { selectedEnv = "PROD" }
+                    selected = selectedEnv == ApiConfig.Environment.PROD,
+                    onClick = { selectedEnv = ApiConfig.Environment.PROD }
                 )
                 Text("Usar Producción")
             }
@@ -104,8 +107,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "PREPROD",
-                    onClick = { selectedEnv = "PREPROD" }
+                    selected = selectedEnv == ApiConfig.Environment.PREPROD,
+                    onClick = { selectedEnv = ApiConfig.Environment.PREPROD }
                 )
                 Text("Usar Preproducción")
             }
@@ -128,8 +131,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
-                    selected = selectedEnv == "DEV",
-                    onClick = { selectedEnv = "DEV" }
+                    selected = selectedEnv == ApiConfig.Environment.DEV,
+                    onClick = { selectedEnv = ApiConfig.Environment.DEV }
                 )
                 Text("Usar Desarrollo")
             }
@@ -137,9 +140,9 @@ fun SettingsScreen(navController: NavController, context: Context) {
             Spacer(Modifier.height(24.dp))
 
             val activeUrl = when (selectedEnv) {
-                "PROD" -> prodUrl
-                "PREPROD" -> preprodUrl
-                else -> devUrl
+                ApiConfig.Environment.PROD -> prodUrl
+                ApiConfig.Environment.PREPROD -> preprodUrl
+                ApiConfig.Environment.DEV -> devUrl
             }
             Text(
                 text = "URL activa: $activeUrl",
@@ -154,14 +157,14 @@ fun SettingsScreen(navController: NavController, context: Context) {
                         .putString("url_prod", prodUrl)
                         .putString("url_preprod", preprodUrl)
                         .putString("url_dev", devUrl)
-                        .putString("env", selectedEnv)
+                        .putString("env", selectedEnv.rawValue)
                         // guardar también la url activa según env
                         .putString(
                             "base_url",
                             when (selectedEnv) {
-                                "PROD" -> prodUrl
-                                "PREPROD" -> preprodUrl
-                                else -> devUrl
+                                ApiConfig.Environment.PROD -> prodUrl
+                                ApiConfig.Environment.PREPROD -> preprodUrl
+                                ApiConfig.Environment.DEV -> devUrl
                             }
                         )
                         .apply()
