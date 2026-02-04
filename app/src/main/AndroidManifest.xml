@@ -51,6 +51,10 @@
             android:foregroundServiceType="dataSync"
             tools:ignore="ForegroundServiceType" />
 
+        <receiver
+            android:name=".services.SmsSentReceiver"
+            android:exported="false" />
+
         <!-- 🔁 Recepción tras reinicio del dispositivo -->
         <receiver
             android:name=".BootReceiver"
