@@ -1,13 +1,12 @@
 package com.example.mccagent.ui.navigation
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.*
-import com.example.mccagent.services.SMSService
 import com.example.mccagent.ui.screens.HomeScreen
 import com.example.mccagent.ui.screens.LoginScreen
 import com.example.mccagent.ui.screens.SettingsScreen
+import com.example.mccagent.utils.SessionManager
 
 @Composable
 fun AppNavigation(context: Context) {
@@ -29,11 +28,7 @@ fun AppNavigation(context: Context) {
         composable("home") {
             HomeScreen(
                 onLogout = {
-                    val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-                    prefs.edit().remove("token").apply()
-
-                    val stopIntent = Intent(context, com.example.mccagent.services.SMSService::class.java)
-                    context.stopService(stopIntent)
+                    SessionManager.logout(context)
 
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }

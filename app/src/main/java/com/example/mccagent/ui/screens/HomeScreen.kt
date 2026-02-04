@@ -21,12 +21,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mccagent.repository.ClientRepositoryImpl
+import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.utils.registrarEsteDispositivo
 import com.example.mccagent.viewmodels.ClientViewModel
 import com.example.mccagent.viewmodels.ClientViewModelFactory
 import com.example.mccagent.ui.components.DialogRegistrarTelefono
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,16 +49,27 @@ fun HomeScreen(
     val mostrarDialogoNumero = remember { mutableStateOf(false) }
     val isRefreshing = remember { mutableStateOf(false) }
 
-    val serviceRunning = remember {
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        prefs.getBoolean("sms_service_running", false)
-    }
+    val serviceRunning = remember { mutableStateOf(false) }
+    val lastSyncLabel = remember { mutableStateOf("Sin sincronización") }
+    val pendingCount = remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
 
     val state by viewModel.clientState.collectAsState()
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
-    LaunchedEffect(Unit) {
+    fun refreshData() {
+        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
+        serviceRunning.value = prefs.getBoolean("sms_service_running", false)
         viewModel.loadClientInfo()
+        scope.launch {
+            pendingCount.value = MessageRepositoryImpl(context).getPendingMessages().size
+        }
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        lastSyncLabel.value = "Última sincronización: ${formatter.format(Date())}"
+    }
+
+    LaunchedEffect(Unit) {
+        refreshData()
     }
 
     Scaffold(
@@ -126,11 +142,25 @@ fun HomeScreen(
                         .height(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (serviceRunning) "🟢 SMS activo" else "🔴 SMS detenido",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (serviceRunning) Color(0xFF2E7D32) else Color.Red
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (serviceRunning.value) "🟢 SMS activo" else "🔴 SMS detenido",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (serviceRunning.value) Color(0xFF2E7D32) else Color.Red
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(lastSyncLabel.value, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "Pendientes: ${pendingCount.value}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { refreshData() }
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
                 }
             }
         }
@@ -139,7 +169,7 @@ fun HomeScreen(
             state = rememberSwipeRefreshState(isRefreshing.value),
             onRefresh = {
                 isRefreshing.value = true
-                viewModel.loadClientInfo()
+                refreshData()
                 isRefreshing.value = false
             }
         ) {
