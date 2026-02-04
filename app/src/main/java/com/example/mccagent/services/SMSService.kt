@@ -24,6 +24,8 @@ class SMSService : Service() {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private var isRunning = false
+    private var retryDelayMs = 10_000L
+    private val maxRetryDelayMs = 60_000L
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
@@ -77,11 +79,14 @@ class SMSService : Service() {
                             sendSMS(msg.mid, msg.recipient, msg.body)
                             delay(2000) // evita saturar
                         }
+
+                        retryDelayMs = 10_000L
                     } catch (e: Exception) {
                         Log.e("SMSService", "❌ Error en loop de envío: ${e.message}", e)
+                        retryDelayMs = (retryDelayMs * 2).coerceAtMost(maxRetryDelayMs)
                     }
 
-                    delay(10000) // espera antes de volver a consultar
+                    delay(retryDelayMs) // espera antes de volver a consultar
                 }
             }
         }
@@ -297,5 +302,4 @@ class SMSService : Service() {
 //    }
 //}
 //
-
 
