@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import android.util.Patterns
+import android.net.Uri
 import com.example.mccagent.config.ApiConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,10 +40,9 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
     fun isValidUrl(value: String): Boolean {
         if (value.isBlank()) return false
-        if (value.startsWith("http://localhost") || value.startsWith("https://localhost")) {
-            return true
-        }
-        return Patterns.WEB_URL.matcher(value).matches()
+        val uri = Uri.parse(value)
+        val scheme = uri.scheme?.lowercase()
+        return (scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()
     }
 
     val prodUrlError = prodUrl.isNotBlank() && !isValidUrl(prodUrl)
