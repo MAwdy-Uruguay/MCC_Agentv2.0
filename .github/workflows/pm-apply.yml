@@ -45,6 +45,4 @@ jobs:
 
           git commit -m "chore(pm): mark commands as executed"
 
-          git pull --rebase origin ${GITHUB_REF_NAME}
-
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git push --force-with-lease origin HEAD:${GITHUB_REF_NAME}
