@@ -8,5 +8,6 @@ data class Client(
     val phone: String,
     val address: String,
     val active: Boolean,
-    val devices: List<Device>
+    val devices: List<Device>,
+    val status: Boolean
 )

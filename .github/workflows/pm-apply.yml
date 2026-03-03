@@ -1,0 +1,40 @@
+name: PM Apply (Markdown -> Issues)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install gray-matter js-yaml
+
+      - name: Execute PM Engine
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: node project-management/scripts/pm-apply.mjs
+
+      - name: Commit execution marks
+        run: |
+          git config user.name "pm-bot"
+          git config user.email "pm-bot@users.noreply.github.com"
+          git add project-management/commands
+          git diff --cached --quiet || git commit -m "chore(pm): marcar comandos ejecutados"
+          git push
