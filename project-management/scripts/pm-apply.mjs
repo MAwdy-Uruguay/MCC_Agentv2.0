@@ -78,10 +78,14 @@ async function run() {
     const spec = yaml.load(yamlBlock);
 
     let milestoneNumber = null;
+    let milestoneOriginalDescription = "";
+    let sprintTotalEstimate = 0;
+    let sprintIssueCount = 0;
 
     if (spec.milestone) {
       const ms = await ensureMilestone(spec.milestone);
       milestoneNumber = ms.number;
+      milestoneOriginalDescription = ms.description || "";
     }
 
     if (Array.isArray(spec.labels)) {
@@ -92,6 +96,12 @@ async function run() {
 
     for (const op of spec.ops || []) {
       if (op.op === "create_issue") {
+
+        sprintIssueCount++;
+        if (op.estimate) {
+          sprintTotalEstimate += Number(op.estimate);
+        }
+
         for (const l of op.labels || []) {
           await ensureLabel(l);
         }
@@ -111,6 +121,25 @@ async function run() {
       }
     }
 
+    // Actualizar milestone con resumen
+    if (milestoneNumber) {
+      const summary = `
+
+---
+
+📊 **Resumen automático del sprint**
+
+- Issues creadas: ${sprintIssueCount}
+- Total estimado: ${sprintTotalEstimate} puntos
+- Generado: ${new Date().toISOString()}
+`;
+
+      await gh("PATCH", `/repos/${owner}/${repo}/milestones/${milestoneNumber}`, {
+        description: milestoneOriginalDescription + summary
+      });
+    }
+
+    // Marcar archivo como ejecutado
     parsed.data.executed_at = new Date().toISOString();
     const updated = matter.stringify(parsed.content, parsed.data);
     fs.writeFileSync(filePath, updated, "utf8");
