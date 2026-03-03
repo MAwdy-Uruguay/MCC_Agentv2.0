@@ -1,0 +1,19 @@
+{
+  "milestone": "Test Sprint 1 - M0",
+  "milestone_number": 3,
+  "total_issues": 1,
+  "total_estimate": 1,
+  "generated_at": "2026-03-03T19:11:58.493Z",
+  "issues": [
+    {
+      "number": 13,
+      "title": "Issue de prueba del motor PM",
+      "state": "open",
+      "labels": [
+        "test",
+        "sprint-test"
+      ],
+      "estimate": 1
+    }
+  ]
+}
