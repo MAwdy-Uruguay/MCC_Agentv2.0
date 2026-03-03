@@ -173,11 +173,6 @@ async function run() {
 
         const labels = [...(op.labels || [])];
 
-        // Soporte para type
-        if (op.type) {
-          labels.push(`type:${op.type.toLowerCase()}`);
-        }
-
         for (const l of labels) {
           await ensureLabel(l);
         }
@@ -190,7 +185,7 @@ async function run() {
           title: op.title,
           body,
           labels,
-          type: 'bug',
+          type: op.type,
           milestone: milestoneNumber
         });
 
