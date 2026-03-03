@@ -12,6 +12,11 @@ if (!repoFull) throw new Error("Falta REPO");
 const [owner, repo] = repoFull.split("/");
 
 const COMMANDS_DIR = path.resolve("project-management/commands");
+const LOGS_DIR = path.resolve("project-management/logs");
+
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
 
 async function gh(method, url, body) {
   const res = await fetch(`https://api.github.com${url}`, {
@@ -61,18 +66,79 @@ async function ensureLabel(name) {
 }
 
 async function run() {
+
   const files = fs.readdirSync(COMMANDS_DIR)
     .filter(f => f.endsWith(".md"));
 
   for (const file of files) {
+
     const filePath = path.join(COMMANDS_DIR, file);
     const raw = fs.readFileSync(filePath, "utf8");
     const parsed = matter(raw);
 
+    // ============================================
+    // REVIEW MODE (si ya fue ejecutado)
+    // ============================================
     if (parsed.data.executed_at) {
-      console.log(`SKIP ${file} (ya ejecutado)`);
+
+      console.log(`REVIEW MODE ${file}`);
+
+      const yamlBlock = extractYamlBlock(raw);
+      const spec = yaml.load(yamlBlock);
+
+      if (!spec.milestone) {
+        console.log("No milestone definido, skip review");
+        continue;
+      }
+
+      const milestones = await gh("GET", `/repos/${owner}/${repo}/milestones?state=all`);
+      const ms = milestones.find(m => m.title === spec.milestone.title);
+
+      if (!ms) {
+        console.log("Milestone no encontrado");
+        continue;
+      }
+
+      const issues = await gh(
+        "GET",
+        `/repos/${owner}/${repo}/issues?milestone=${ms.number}&state=all`
+      );
+
+      let totalEstimate = 0;
+
+      const simplified = issues.map(i => {
+        const estimateMatch = i.body?.match(/Estimate:\s*(\d+)/);
+        const estimate = estimateMatch ? Number(estimateMatch[1]) : 0;
+        totalEstimate += estimate;
+
+        return {
+          number: i.number,
+          title: i.title,
+          state: i.state,
+          labels: i.labels.map(l => l.name),
+          estimate
+        };
+      });
+
+      const review = {
+        milestone: ms.title,
+        milestone_number: ms.number,
+        total_issues: simplified.length,
+        total_estimate: totalEstimate,
+        generated_at: new Date().toISOString(),
+        issues: simplified
+      };
+
+      const logPath = path.join(LOGS_DIR, file.replace(".md", ".review.json"));
+      fs.writeFileSync(logPath, JSON.stringify(review, null, 2));
+
+      console.log(`Review generado: ${logPath}`);
       continue;
     }
+
+    // ============================================
+    // APPLY MODE
+    // ============================================
 
     const yamlBlock = extractYamlBlock(raw);
     const spec = yaml.load(yamlBlock);
@@ -95,14 +161,23 @@ async function run() {
     }
 
     for (const op of spec.ops || []) {
+
       if (op.op === "create_issue") {
 
         sprintIssueCount++;
+
         if (op.estimate) {
           sprintTotalEstimate += Number(op.estimate);
         }
 
-        for (const l of op.labels || []) {
+        const labels = [...(op.labels || [])];
+
+        // Soporte para type
+        if (op.type) {
+          labels.push(`type:${op.type.toLowerCase()}`);
+        }
+
+        for (const l of labels) {
           await ensureLabel(l);
         }
 
@@ -113,7 +188,7 @@ async function run() {
         const issue = await gh("POST", `/repos/${owner}/${repo}/issues`, {
           title: op.title,
           body,
-          labels: op.labels,
+          labels,
           milestone: milestoneNumber
         });
 
@@ -123,6 +198,7 @@ async function run() {
 
     // Actualizar milestone con resumen
     if (milestoneNumber) {
+
       const summary = `
 
 ---
@@ -139,7 +215,7 @@ async function run() {
       });
     }
 
-    // Marcar archivo como ejecutado
+    // Marcar como ejecutado
     parsed.data.executed_at = new Date().toISOString();
     const updated = matter.stringify(parsed.content, parsed.data);
     fs.writeFileSync(filePath, updated, "utf8");
