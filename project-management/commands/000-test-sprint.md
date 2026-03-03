@@ -4,7 +4,7 @@ title: "Test Sprint 1"
 mode: apply
 ---
 
-```yaml```
+```yaml
 milestone:
   title: "Test Sprint 1"
   description: "Milestone de prueba para validar motor PM."
@@ -22,3 +22,4 @@ ops:
     body: |
       Esta issue fue creada automáticamente desde Markdown.
       Sirve para validar el flujo completo.
+```
