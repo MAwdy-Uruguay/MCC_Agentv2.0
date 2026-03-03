@@ -1,8 +1,8 @@
 ---
-id: test-sprint-2
-title: Test Sprint 1
+id: test-sprint-3
+title: Test Sprint 3
 mode: apply
-executed_at: '2026-03-03T18:25:32.369Z'
+executed_at: '2026-03-03T18:32:12.100Z'
 ---
 
 ```yaml
@@ -17,9 +17,9 @@ labels:
 
 ops:
   - op: create_issue
-    title: "Issue de prueba del motor PM"
+    title: "Issue Type0"
     labels: ["test","sprint-test"]
-    type: Feature
+    issue_type: Feature
     estimate: 1
     body: |
       Esta issue fue creada automáticamente desde Markdown.

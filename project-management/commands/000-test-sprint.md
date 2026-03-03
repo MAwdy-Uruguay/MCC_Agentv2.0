@@ -2,12 +2,12 @@
 id: test-sprint-1
 title: Test Sprint 1
 mode: apply
-executed_at: '2026-03-03T16:02:31.388Z'
+executed_at: '2026-03-03T18:25:30.334Z'
 ---
 
 ```yaml
 milestone:
-  title: "Test Sprint 1"
+  title: "Test Sprint 1 - M0"
   description: "Milestone de prueba para validar motor PM."
   due_on: "2026-03-20"
 
