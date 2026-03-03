@@ -2,6 +2,7 @@
 id: test-sprint-1
 title: Test Sprint 1
 mode: apply
+executed_at: '2026-03-03T16:42:12.016Z'
 ---
 
 ```yaml
