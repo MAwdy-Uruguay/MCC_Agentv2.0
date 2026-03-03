@@ -190,6 +190,7 @@ async function run() {
           title: op.title,
           body,
           labels,
+          type: 'bug',
           milestone: milestoneNumber
         });
 
