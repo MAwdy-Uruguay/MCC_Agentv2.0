@@ -23,3 +23,4 @@ ops:
     body: |
       Esta issue fue creada automáticamente desde Markdown.
       Sirve para validar el flujo completo.
+```
