@@ -1,11 +1,10 @@
-```md
 ---
 id: test-sprint-1
 title: "Test Sprint 1"
 mode: apply
 ---
 
-```yaml
+```yaml```
 milestone:
   title: "Test Sprint 1"
   description: "Milestone de prueba para validar motor PM."
