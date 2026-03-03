@@ -116,6 +116,7 @@ async function run() {
           title: i.title,
           state: i.state,
           labels: i.labels.map(l => l.name),
+          type: i.type,
           estimate
         };
       });
