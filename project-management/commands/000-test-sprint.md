@@ -1,4 +1,3 @@
-```md
 ---
 id: test-sprint-1
 title: "Test Sprint 1"
