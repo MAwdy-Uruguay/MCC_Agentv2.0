@@ -2,6 +2,7 @@ package com.example.mccagent.network
 
 import android.content.Context
 import android.util.Log
+import com.example.mccagent.BuildConfig
 import com.example.mccagent.R
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.models.interfaces.IApiService
@@ -24,16 +25,21 @@ object RetrofitClient {
         val baseUrl = ApiConfig.getBaseUrl(context)
         val currentEnv = ApiConfig.getEnv(context)
 
-        // Logging
+        // Logging condicionado por tipo de compilación y con cabeceras sensibles ocultas.
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            redactHeader("Authorization")
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
-        // 🔑 Seleccionar el certificado según el ambiente
+        // Seleccionar el certificado según el ambiente.
         val certResId = when (currentEnv) {
             ApiConfig.Environment.DEV -> R.raw.dev_cert
-            ApiConfig.Environment.PREPROD -> R.raw.mccserverca  // agregalo en res/raw
-            ApiConfig.Environment.PROD -> R.raw.mccserverca // PROD debería usar un cert público válido
+            ApiConfig.Environment.PREPROD -> R.raw.mccserverca
+            ApiConfig.Environment.PROD -> R.raw.mccserverca
         }
 
         val clientBuilder = OkHttpClient.Builder()
@@ -49,7 +55,6 @@ object RetrofitClient {
             }
 
         if (certResId != null) {
-            // 💡 Cargar el certificado desde res/raw
             val cf = CertificateFactory.getInstance("X.509")
             context.resources.openRawResource(certResId).use { caInput ->
                 val ca = cf.generateCertificate(caInput)
@@ -86,14 +91,15 @@ object RetrofitClient {
             token = renewToken(context)
             if (!token.isNullOrBlank()) {
                 SecureSessionStorage.guardarToken(context, token)
-                Log.d("RetrofitClient", "\uD83D\uDD10 Token renovado y guardado: $token")
+                Log.i("RetrofitClient", "Token renovado y persistido en almacenamiento seguro")
             } else {
-                Log.e("RetrofitClient", "\u274C No se pudo renovar el token")
+                Log.w("RetrofitClient", "No fue posible renovar el token")
             }
         }
 
         return getApiService(context)
     }
+
     private fun isTokenExpired(token: String): Boolean {
         return try {
             val parts = token.split(".")
@@ -108,15 +114,18 @@ object RetrofitClient {
             true
         }
     }
+
     suspend fun renewToken(context: Context): String? {
         return try {
             val oldToken = SecureSessionStorage.obtenerToken(context)
 
             val tempClient = OkHttpClient.Builder()
                 .addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
-                        .addHeader("Authorization", "Bearer $oldToken")
-                        .build()
+                    val request = chain.request().newBuilder().apply {
+                        if (!oldToken.isNullOrBlank()) {
+                            addHeader("Authorization", "Bearer $oldToken")
+                        }
+                    }.build()
                     chain.proceed(request)
                 }
                 .build()
@@ -134,16 +143,15 @@ object RetrofitClient {
                 val newToken = response.body()?.token
                 if (!newToken.isNullOrBlank()) {
                     SecureSessionStorage.guardarToken(context, newToken)
-                    Log.d("RetrofitClient", "🔁 Token renovado: $newToken")
+                    Log.i("RetrofitClient", "Renovación de token completada")
                     return newToken
                 }
             }
 
             null
         } catch (e: Exception) {
-            Log.e("RetrofitClient", "💥 Error renovando token con Retrofit", e)
+            Log.e("RetrofitClient", "Error controlado durante la renovación de token", e)
             null
         }
     }
-
 }
