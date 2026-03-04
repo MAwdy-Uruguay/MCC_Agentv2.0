@@ -19,6 +19,7 @@ import com.example.mccagent.repository.AuthRepositoryImpl
 import com.example.mccagent.network.RetrofitClient
 import com.example.mccagent.data.LoginRequest
 import com.example.mccagent.config.ApiConfig
+import com.example.mccagent.utils.SecureSessionStorage
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -58,8 +59,7 @@ fun LoginScreen(
                 val response = authState as AuthState.Success
                 val token = response.response.token
 
-                val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putString("token", token).apply()
+                SecureSessionStorage.guardarToken(context, token)
 
                 scope.launch {
                     snackbarHostState.showSnackbar("✅ Bienvenido, ${response.response.user.fullname}")

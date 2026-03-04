@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.mccagent.R
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.models.interfaces.IApiService
+import com.example.mccagent.utils.SecureSessionStorage
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -18,8 +19,7 @@ import javax.net.ssl.X509TrustManager
 object RetrofitClient {
 
     fun getApiService(context: Context): IApiService {
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        ApiConfig.prefs = prefs
+        ApiConfig.prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
 
         val baseUrl = ApiConfig.getBaseUrl(context)
         val currentEnv = ApiConfig.getEnv(context)
@@ -39,7 +39,7 @@ object RetrofitClient {
         val clientBuilder = OkHttpClient.Builder()
             .addInterceptor(logging)
             .addInterceptor { chain ->
-                val token = prefs.getString("token", null)
+                val token = SecureSessionStorage.obtenerToken(context)
                 val request = chain.request().newBuilder().apply {
                     if (!token.isNullOrEmpty()) {
                         addHeader("Authorization", "Bearer $token")
@@ -80,13 +80,12 @@ object RetrofitClient {
     }
 
     suspend fun getApiWithValidToken(context: Context): IApiService {
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        var token = prefs.getString("token", null)
+        var token = SecureSessionStorage.obtenerToken(context)
 
         if (token.isNullOrBlank() || isTokenExpired(token)) {
             token = renewToken(context)
             if (!token.isNullOrBlank()) {
-                prefs.edit().putString("token", token).apply()
+                SecureSessionStorage.guardarToken(context, token)
                 Log.d("RetrofitClient", "\uD83D\uDD10 Token renovado y guardado: $token")
             } else {
                 Log.e("RetrofitClient", "\u274C No se pudo renovar el token")
@@ -111,8 +110,7 @@ object RetrofitClient {
     }
     suspend fun renewToken(context: Context): String? {
         return try {
-            val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-            val oldToken = prefs.getString("token", null)
+            val oldToken = SecureSessionStorage.obtenerToken(context)
 
             val tempClient = OkHttpClient.Builder()
                 .addInterceptor { chain ->
@@ -135,7 +133,7 @@ object RetrofitClient {
             if (response.isSuccessful) {
                 val newToken = response.body()?.token
                 if (!newToken.isNullOrBlank()) {
-                    prefs.edit().putString("token", newToken).apply()
+                    SecureSessionStorage.guardarToken(context, newToken)
                     Log.d("RetrofitClient", "🔁 Token renovado: $newToken")
                     return newToken
                 }
