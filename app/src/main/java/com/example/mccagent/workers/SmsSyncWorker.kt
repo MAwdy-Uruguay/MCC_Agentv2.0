@@ -4,10 +4,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.telephony.SmsManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.mccagent.Manifest
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.services.SmsSentReceiver
 import com.example.mccagent.utils.SmsCorrelationKeyFactory
@@ -26,6 +29,15 @@ class SmsSyncWorker(
             return Result.success()
         }
 
+        val permisoSms = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.SEND_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!permisoSms) {
+            Log.e("SmsSyncWorker", "Permiso SEND_SMS no concedido; no es posible despachar pendientes")
+            return Result.retry()
+        }
+
         return try {
             val repository = MessageRepositoryImpl(context)
             val messages = repository.getPendingMessages()
@@ -38,7 +50,12 @@ class SmsSyncWorker(
                     sendSMS(context, msg.mid, msg.recipient, msg.body)
                     delay(1200)
                 } else {
-                    Log.w("SmsSyncWorker", "No se pudo marcar el mensaje en progreso; se evita duplicado")
+                    Log.w(
+                        "SmsSyncWorker",
+                        "No se pudo marcar en ENVIANDO el mensaje ${msg.mid}; se intentará despacho igualmente"
+                    )
+                    sendSMS(context, msg.mid, msg.recipient, msg.body)
+                    delay(1200)
                 }
             }
 
@@ -62,10 +79,13 @@ class SmsSyncWorker(
         )
 
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Log.d("SmsSyncWorker", "Despachando SMS en Android ${Build.VERSION.SDK_INT} hacia $phone")
+            }
             SmsManager.getDefault().sendTextMessage(phone, null, body, sentIntent, null)
-            Log.i("SmsSyncWorker", "SMS despachado para confirmación de entrega")
+            Log.i("SmsSyncWorker", "SMS despachado para confirmación de entrega. mid=$mid")
         } catch (e: Exception) {
-            Log.e("SmsSyncWorker", "Error al despachar SMS", e)
+            Log.e("SmsSyncWorker", "Error al despachar SMS. mid=$mid", e)
         }
     }
 }
