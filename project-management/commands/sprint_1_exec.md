@@ -1,3 +1,6 @@
+---
+executed_at: '2026-03-04T13:54:44.818Z'
+---
 # Sprint 1 — Ejecución
 
 ```yaml
