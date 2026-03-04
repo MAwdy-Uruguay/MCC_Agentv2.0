@@ -178,5 +178,4 @@ ops:
       type: Docs
       estimate: 1
       body: |
-        Registrar decisiones en bitácora técnica del sprint.
-```
+        Registrar decisiones en bitácora técnica del sprintgit
