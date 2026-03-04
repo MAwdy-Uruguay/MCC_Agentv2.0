@@ -68,7 +68,7 @@ async function ensureLabel(name) {
 async function run() {
 
   const files = fs.readdirSync(COMMANDS_DIR)
-    .filter(f => f.endsWith(".md"));
+    .filter(f => f.endsWith(".md") && !f.startsWith("_"));
 
   for (const file of files) {
 
@@ -76,9 +76,9 @@ async function run() {
     const raw = fs.readFileSync(filePath, "utf8");
     const parsed = matter(raw);
 
-    // ============================================
-    // REVIEW MODE (si ya fue ejecutado)
-    // ============================================
+    // ===============================
+    // REVIEW MODE
+    // ===============================
     if (parsed.data.executed_at) {
 
       console.log(`REVIEW MODE ${file}`);
@@ -107,6 +107,7 @@ async function run() {
       let totalEstimate = 0;
 
       const simplified = issues.map(i => {
+
         const estimateMatch = i.body?.match(/Estimate:\s*(\d+)/);
         const estimate = estimateMatch ? Number(estimateMatch[1]) : 0;
         totalEstimate += estimate;
@@ -116,7 +117,7 @@ async function run() {
           title: i.title,
           state: i.state,
           labels: i.labels.map(l => l.name),
-          type: i.type?.name || null,
+          type: i.issue_type?.name || null,
           estimate
         };
       });
@@ -137,9 +138,9 @@ async function run() {
       continue;
     }
 
-    // ============================================
+    // ===============================
     // APPLY MODE
-    // ============================================
+    // ===============================
 
     const yamlBlock = extractYamlBlock(raw);
     const spec = yaml.load(yamlBlock);
@@ -181,22 +182,27 @@ async function run() {
           ? `${op.body}\n\n---\nEstimate: ${op.estimate}`
           : op.body;
 
-        const issue = await gh("POST", `/repos/${owner}/${repo}/issues`, {
+        const payload = {
           title: op.title,
           body,
           labels,
           milestone: milestoneNumber
-        });
+        };
 
         if (op.type) {
-            issue.type = op.type;
-           }
+          payload.type = op.type;
+        }
+
+        const issue = await gh("POST", `/repos/${owner}/${repo}/issues`, payload);
 
         console.log(`Created issue #${issue.number}`);
       }
     }
 
-    // Actualizar milestone con resumen
+    // ===============================
+    // Actualizar milestone resumen
+    // ===============================
+
     if (milestoneNumber) {
 
       const summary = `
@@ -215,7 +221,10 @@ async function run() {
       });
     }
 
-    // Marcar como ejecutado
+    // ===============================
+    // Marcar ejecutado
+    // ===============================
+
     parsed.data.executed_at = new Date().toISOString();
     const updated = matter.stringify(parsed.content, parsed.data);
     fs.writeFileSync(filePath, updated, "utf8");
