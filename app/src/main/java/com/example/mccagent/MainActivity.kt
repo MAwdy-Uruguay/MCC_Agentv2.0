@@ -8,12 +8,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import com.example.mccagent.utils.SessionManager
 import com.example.mccagent.workers.SmsWorkScheduler
 import com.example.mccagent.ui.theme.MCCAgentTheme
 import android.util.Log
@@ -70,15 +66,4 @@ class MainActivity : ComponentActivity() {
         SmsWorkScheduler.schedule(this)
     }
 
-    fun handleLogout(context: Context) {
-        SessionManager.logout(context)
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
 }
