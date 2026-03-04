@@ -18,9 +18,38 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "entorno"
+
+    productFlavors {
+        create("dev") {
+            dimension = "entorno"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "ENTORNO", "\"DEV\"")
+        }
+
+        create("preprod") {
+            dimension = "entorno"
+            applicationIdSuffix = ".preprod"
+            versionNameSuffix = "-preprod"
+            buildConfigField("String", "ENTORNO", "\"PREPROD\"")
+        }
+
+        create("prod") {
+            dimension = "entorno"
+            buildConfigField("String", "ENTORNO", "\"PROD\"")
+        }
+    }
+
     buildTypes {
+        debug {
+            isDebuggable = true
+            buildConfigField("String", "TIPO_COMPILACION", "\"DEBUG\"")
+        }
+
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "TIPO_COMPILACION", "\"RELEASE\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -36,6 +65,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -74,11 +104,12 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-text:1.6.5")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
-    implementation ("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    implementation ("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("com.google.accompanist:accompanist-swiperefresh:0.33.2-alpha")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
 
     configurations.all {
