@@ -116,7 +116,7 @@ async function run() {
           title: i.title,
           state: i.state,
           labels: i.labels.map(l => l.name),
-          type: i.type,
+          type: i.type?.name || null,
           estimate
         };
       });
@@ -185,9 +185,12 @@ async function run() {
           title: op.title,
           body,
           labels,
-          type: op.type,
           milestone: milestoneNumber
         });
+
+        if (op.type) {
+            issue.type = op.type;
+           }
 
         console.log(`Created issue #${issue.number}`);
       }
