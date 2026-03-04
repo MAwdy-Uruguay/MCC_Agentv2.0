@@ -10,6 +10,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.services.SmsSentReceiver
+import com.example.mccagent.utils.SmsCorrelationKeyFactory
 import kotlinx.coroutines.delay
 
 class SmsSyncWorker(
@@ -49,8 +50,10 @@ class SmsSyncWorker(
     }
 
     private fun sendSMS(context: Context, mid: String, phone: String, body: String) {
-        val intent = Intent(context, SmsSentReceiver::class.java).putExtra("mid", mid)
-        val requestCode = mid.hashCode()
+        val intent = Intent(context, SmsSentReceiver::class.java)
+            .setAction(SmsCorrelationKeyFactory.accionConfirmacion(mid))
+            .putExtra("mid", mid)
+        val requestCode = SmsCorrelationKeyFactory.requestCode(mid)
         val sentIntent = PendingIntent.getBroadcast(
             context,
             requestCode,

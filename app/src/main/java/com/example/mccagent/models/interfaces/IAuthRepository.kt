@@ -6,6 +6,4 @@ import retrofit2.Response
 
 interface IAuthRepository {
     suspend fun login(request: LoginRequest): Response<LoginResponse>
-
-    suspend fun renew(): Response<LoginResponse>
 }
