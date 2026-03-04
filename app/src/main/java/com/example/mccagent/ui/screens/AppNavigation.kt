@@ -6,13 +6,16 @@ import androidx.navigation.compose.*
 import com.example.mccagent.ui.screens.HomeScreen
 import com.example.mccagent.ui.screens.LoginScreen
 import com.example.mccagent.ui.screens.SettingsScreen
+import com.example.mccagent.utils.SecureSessionStorage
 import com.example.mccagent.utils.SessionManager
 
 @Composable
 fun AppNavigation(context: Context) {
     val navController = rememberNavController()
+    val tokenInicial = SecureSessionStorage.obtenerToken(context)
+    val destinoInicial = if (tokenInicial.isNullOrBlank()) "login" else "home"
 
-    NavHost(navController, startDestination = "login") {
+    NavHost(navController, startDestination = destinoInicial) {
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
