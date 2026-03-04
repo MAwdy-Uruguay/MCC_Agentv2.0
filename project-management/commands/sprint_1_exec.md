@@ -1,252 +1,182 @@
----
-executed_at: '2026-03-04T13:54:44.818Z'
----
-# Sprint 1 — Ejecución
-
 ```yaml
-version: 1
-sprint: "Sprint 1 - Seguridad y saneamiento"
-operations:
-  - create_issue:
+milestone: "Sprint 1 - Seguridad y saneamiento"
+labels:
+  - sprint-1
+  - prioridad:alta
+ops:
+  - op: create_issue
+    create_issue:
       title: "Definir política por sabor y tipo de compilación para DEV, PREPROD y PROD"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Implementar la definición de política de red por sabor y tipo de compilación para DEV, PREPROD y PROD.
+        Definir política por sabor y tipo de compilación para DEV, PREPROD y PROD.
 
-        Criterio de aceptación relacionado:
-        - La excepción de tráfico en texto plano queda limitada y documentada por entorno.
-
-  - create_issue:
-      title: "Ajustar AndroidManifest.xml para no permitir tráfico en texto plano global"
+  - op: create_issue
+    create_issue:
+      title: "Ajustar AndroidManifest.xml para no permitir tráfico en texto plano de forma global"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 2
       body: |
-        Ajustar AndroidManifest.xml para eliminar la habilitación global de tráfico en texto plano.
+        Ajustar AndroidManifest.xml para no permitir tráfico en texto plano de forma global.
 
-        Criterios de aceptación relacionados:
-        - En producción no se permite tráfico HTTP plano.
-        - La aplicación mantiene conectividad en endpoints HTTPS válidos.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Configurar network_security_config específico por entorno"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Configurar network_security_config por entorno para controlar excepciones de seguridad de red.
+        Configurar network_security_config específico por entorno.
 
-        Criterio de aceptación relacionado:
-        - Las excepciones de texto plano quedan limitadas por entorno.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Validar conectividad HTTPS en cada entorno soportado"
       type: Test
-      labels: ["sprint-1", "seguridad", "pruebas", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Ejecutar validaciones de conectividad HTTPS en DEV, PREPROD y PROD.
+        Validar conectividad HTTPS en cada entorno soportado.
 
-        Criterio de aceptación relacionado:
-        - La aplicación mantiene conectividad en endpoints HTTPS válidos.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Condicionar HttpLoggingInterceptor por BuildConfig.DEBUG"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Ajustar la configuración de logging HTTP para habilitar detalles solo en compilaciones de depuración.
+        Condicionar HttpLoggingInterceptor por BuildConfig.DEBUG.
 
-        Criterio de aceptación relacionado:
-        - En compilación de producción no se registran cuerpos de solicitud/respuesta.
-
-  - create_issue:
-      title: "Evitar impresión de Authorization y secretos en registros"
+  - op: create_issue
+    create_issue:
+      title: "Evitar impresión de Authorization y otros secretos"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Sanitizar registros para impedir exposición de cabeceras sensibles y secretos.
+        Evitar impresión de Authorization y otros secretos.
 
-        Criterio de aceptación relacionado:
-        - No se registran tokens ni cabeceras sensibles en ninguna compilación.
-
-  - create_issue:
-      title: "Revisar registros de errores para excluir tokens y datos personales"
+  - op: create_issue
+    create_issue:
+      title: "Revisar registros de errores para no incluir tokens ni datos personales"
       type: Security
-      labels: ["sprint-1", "seguridad", "observabilidad", "prioridad:alta"]
       estimate: 1
       body: |
-        Revisar y corregir los registros de errores para evitar filtración de datos sensibles o personales.
+        Revisar registros de errores para no incluir tokens ni datos personales.
 
-        Criterio de aceptación relacionado:
-        - No se exponen datos sensibles en registros.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Actualizar guía de depuración segura"
       type: Docs
-      labels: ["sprint-1", "seguridad", "documentacion", "prioridad:alta"]
       estimate: 1
       body: |
-        Actualizar la guía de depuración segura con lineamientos de logging y tratamiento de datos sensibles.
+        Actualizar guía de depuración segura.
 
-        Criterio de aceptación relacionado:
-        - Se mantiene trazabilidad útil sin comprometer seguridad.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Integrar almacenamiento cifrado para sesión"
       type: Security
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 2
       body: |
-        Integrar almacenamiento cifrado para persistencia de credenciales de sesión.
+        Integrar almacenamiento cifrado (EncryptedSharedPreferences o equivalente).
 
-        Criterio de aceptación relacionado:
-        - El token no se guarda en texto plano.
-
-  - create_issue:
-      title: "Implementar migración no disruptiva del token existente"
+  - op: create_issue
+    create_issue:
+      title: "Implementar migración no disruptiva de token existente"
       type: Fix
-      labels: ["sprint-1", "seguridad", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Implementar migración de token previo hacia almacenamiento cifrado sin afectar sesiones activas.
+        Implementar migración no disruptiva de token existente.
 
-        Criterio de aceptación relacionado:
-        - La sesión previa se migra correctamente sin romper el inicio de sesión.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Ajustar lectura y escritura de sesión en componentes afectados"
       type: Refactor
-      labels: ["sprint-1", "arquitectura", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Ajustar los componentes que consumen sesión para usar el nuevo almacenamiento seguro.
+        Ajustar lectura y escritura de sesión en componentes afectados.
 
-        Criterio de aceptación relacionado:
-        - Inicio de sesión, renovación y cierre de sesión funcionan correctamente.
-
-  - create_issue:
-      title: "Verificar inicio, renovación y cierre de sesión con almacenamiento cifrado"
+  - op: create_issue
+    create_issue:
+      title: "Verificar inicio de sesión, renovación y cierre de sesión"
       type: Test
-      labels: ["sprint-1", "pruebas", "seguridad", "prioridad:alta"]
       estimate: 1
       body: |
-        Ejecutar validaciones funcionales para inicio, renovación y cierre de sesión tras la migración.
+        Verificar comportamiento de inicio de sesión, renovación y cierre de sesión.
 
-        Criterio de aceptación relacionado:
-        - Cierre de sesión elimina credenciales de forma segura.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Definir decisión técnica del mecanismo único de ejecución SMS"
       type: Refactor
-      labels: ["sprint-1", "arquitectura", "mensajeria", "prioridad:alta"]
       estimate: 2
       body: |
-        Definir y documentar la estrategia única de ejecución de envío SMS para operación estable.
+        Definir decisión técnica del mecanismo único de ejecución SMS.
 
-        Criterio de aceptación relacionado:
-        - Solo existe un flujo activo de envío de SMS.
-
-  - create_issue:
-      title: "Eliminar rutas no usadas y código muerto/comentado del flujo SMS"
+  - op: create_issue
+    create_issue:
+      title: "Eliminar rutas no usadas y código muerto o comentado"
       type: Refactor
-      labels: ["sprint-1", "deuda-tecnica", "mensajeria", "prioridad:alta"]
       estimate: 2
       body: |
-        Eliminar rutas obsoletas y código muerto asociado al flujo alternativo de envío.
+        Eliminar rutas no usadas y código muerto o comentado.
 
-        Criterio de aceptación relacionado:
-        - No hay doble programación ni competencia entre worker/servicio.
-
-  - create_issue:
-      title: "Ajustar reprogramación al reinicio con el mecanismo elegido"
+  - op: create_issue
+    create_issue:
+      title: "Ajustar reprogramación en reinicio al mecanismo elegido"
       type: Fix
-      labels: ["sprint-1", "mensajeria", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Ajustar la reprogramación de sincronización en reinicio para que use únicamente el flujo adoptado.
+        Ajustar reprogramación en reinicio al mecanismo elegido.
 
-        Criterio de aceptación relacionado:
-        - El flujo sigue operativo tras reinicio del dispositivo.
-
-  - create_issue:
+  - op: create_issue
+    create_issue:
       title: "Validar ausencia de envíos duplicados en escenarios de reintento"
       type: Test
-      labels: ["sprint-1", "pruebas", "mensajeria", "prioridad:alta"]
       estimate: 1
       body: |
-        Ejecutar pruebas de reintento para comprobar que no se produzcan envíos duplicados.
+        Validar ausencia de envíos duplicados en escenarios de reintento.
 
-        Criterio de aceptación relacionado:
-        - No hay competencia entre rutas ni duplicidad de envío.
-
-  - create_issue:
-      title: "Implementar requestCode único por mid en PendingIntent"
+  - op: create_issue
+    create_issue:
+      title: "Usar requestCode único por mid"
       type: Fix
-      labels: ["sprint-1", "mensajeria", "confiabilidad", "prioridad:alta"]
       estimate: 1
       body: |
-        Ajustar la generación de requestCode para que sea único por mensaje y evitar colisiones.
+        Usar requestCode único por mid (por ejemplo mid.hashCode()).
 
-        Criterio de aceptación relacionado:
-        - Cada SMS mantiene correlación correcta con su confirmación de estado.
-
-  - create_issue:
-      title: "Revisar coherencia de PendingIntent en SmsSyncWorker y ruta adoptada"
+  - op: create_issue
+    create_issue:
+      title: "Revisar coherencia de requestCode en SmsSyncWorker y ruta adoptada"
       type: Refactor
-      labels: ["sprint-1", "mensajeria", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Validar y unificar el patrón de construcción de PendingIntent en la ruta de envío vigente.
+        Revisar coherencia de requestCode en SmsSyncWorker y ruta de envío adoptada.
 
-        Criterio de aceptación relacionado:
-        - No se observan colisiones de intents entre mensajes.
-
-  - create_issue:
-      title: "Probar envío por lotes con resultados mixtos para detectar colisiones"
+  - op: create_issue
+    create_issue:
+      title: "Probar múltiples mensajes en cola con resultados mixtos"
       type: Test
-      labels: ["sprint-1", "pruebas", "mensajeria", "prioridad:alta"]
       estimate: 1
       body: |
-        Probar escenarios de envío por lotes con éxitos y fallos combinados para verificar correlación de estados.
+        Probar múltiples mensajes en cola con resultados mixtos (éxito y fallo).
 
-        Criterio de aceptación relacionado:
-        - No se observan colisiones en pruebas con lotes de mensajes.
-
-  - create_issue:
-      title: "Eliminar bloques comentados obsoletos del código fuente"
+  - op: create_issue
+    create_issue:
+      title: "Eliminar bloques comentados obsoletos"
       type: Refactor
-      labels: ["sprint-1", "deuda-tecnica", "android", "prioridad:alta"]
       estimate: 1
       body: |
-        Retirar implementaciones comentadas que ya no forman parte del diseño vigente.
+        Eliminar bloques comentados obsoletos.
 
-        Criterio de aceptación relacionado:
-        - Código fuente sin bloques comentados de implementaciones viejas.
-
-  - create_issue:
-      title: "Remover duplicidades en contrato API de renovación de token"
+  - op: create_issue
+    create_issue:
+      title: "Remover duplicidades en contrato API de renovación"
       type: Refactor
-      labels: ["sprint-1", "deuda-tecnica", "arquitectura", "prioridad:alta"]
       estimate: 1
       body: |
-        Unificar métodos redundantes de renovación en la interfaz API para reducir complejidad.
+        Remover duplicidades obvias en contrato API (renovación de token duplicada).
 
-        Criterio de aceptación relacionado:
-        - Contrato de API sin duplicidades funcionales innecesarias.
-
-  - create_issue:
-      title: "Registrar decisiones técnicas del sprint en bitácora"
+  - op: create_issue
+    create_issue:
+      title: "Registrar decisiones en bitácora técnica del sprint"
       type: Docs
-      labels: ["sprint-1", "documentacion", "arquitectura", "prioridad:alta"]
       estimate: 1
       body: |
-        Documentar decisiones de arquitectura y seguridad adoptadas durante el sprint para trazabilidad.
-
-        Criterio de aceptación relacionado:
-        - Revisión de pares aprobada por legibilidad y mantenibilidad.
+        Registrar decisiones en bitácora técnica del sprint.
 ```
