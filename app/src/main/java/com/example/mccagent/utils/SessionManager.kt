@@ -5,8 +5,7 @@ import com.example.mccagent.workers.SmsWorkScheduler
 
 object SessionManager {
     fun logout(context: Context) {
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        prefs.edit().remove("token").apply()
+        SecureSessionStorage.limpiarSesion(context)
         SmsWorkScheduler.stop(context)
     }
 }
