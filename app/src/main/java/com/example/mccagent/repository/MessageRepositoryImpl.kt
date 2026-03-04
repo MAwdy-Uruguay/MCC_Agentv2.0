@@ -13,9 +13,8 @@ import retrofit2.Response
 class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
 
     private suspend fun getApi(): IApiService {
-        return RetrofitClient.getApiWithValidToken(context) // ✅ ACÁ SÍ puede usarse suspend
+        return RetrofitClient.getApiWithValidToken(context)
     }
-   // val api = RetrofitClient.getApiWithValidToken(context)
 
     override suspend fun getPendingMessages(): List<Message> {
         return try {

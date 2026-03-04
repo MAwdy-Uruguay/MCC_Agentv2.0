@@ -2,22 +2,28 @@ package com.example.mccagent.workers
 
 import android.content.Context
 import androidx.work.BackoffPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 object SmsWorkScheduler {
-    private const val WORK_NAME = "sms_sync"
+    private const val WORK_NAME = "sms_sync_periodico"
 
-    fun schedule(context: Context, delaySeconds: Long = 0L) {
-        val request = OneTimeWorkRequestBuilder<SmsSyncWorker>()
-            .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
+    fun schedule(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<SmsSyncWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context)
-            .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+            .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
 
         context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             .edit()
