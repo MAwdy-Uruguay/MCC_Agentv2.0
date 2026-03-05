@@ -44,9 +44,9 @@ fun CompanyCard(nombreEmpresa: String, subtitulo: String) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Image(
-                painter = painterResource(id = R.drawable.logo_mcc),
+                painter = painterResource(id = R.drawable.logo_mccagent),
                 contentDescription = "Logo corporativo",
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(64.dp)
             )
             Spacer(modifier = Modifier.height(14.dp))
             Text(
@@ -68,7 +68,7 @@ fun CompanyCard(nombreEmpresa: String, subtitulo: String) {
 @Composable
 fun PhonesList(dispositivos: List<Device>, idActual: String) {
     if (dispositivos.isEmpty()) {
-        Text("No hay teléfonos registrados.", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
+        Text("No hay telefonos registrados.", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
         return
     }
 
@@ -91,7 +91,7 @@ fun PhonesList(dispositivos: List<Device>, idActual: String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(dispositivo.phone.ifBlank { "Sin teléfono" }, color = TextoPrincipal, style = MaterialTheme.typography.titleMedium)
+                        Text(dispositivo.phone.ifBlank { "Sin telefono" }, color = TextoPrincipal, style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(dispositivo.name, color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
                     }
@@ -133,7 +133,7 @@ fun SystemFooterStatus(
             Spacer(modifier = Modifier.height(10.dp))
             Text("Servicio: $estadoServicio", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
             Text("Pendientes: $pendientes", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
-            Text("Última consulta: $ultimaConsulta", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
+            Text("Ultima consulta: $ultimaConsulta", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)
             if (!error.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider(color = DivisorSuave)

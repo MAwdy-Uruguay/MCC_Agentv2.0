@@ -35,6 +35,9 @@ interface IApiService {
     @GET("messages")
     suspend fun getPendingMessages(): Response<MessageListResponse>
 
+    @GET("messages/all")
+    suspend fun getAllMessages(): Response<MessageListResponse>
+
     @PUT("messages/{id}/status")
     suspend fun updateMessageStatus(
         @Path("id") messageId: String,

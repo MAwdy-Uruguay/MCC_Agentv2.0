@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.mccagent.ui.screens.HomeScreen
 import com.example.mccagent.ui.screens.LoginScreen
+import com.example.mccagent.ui.screens.MessagesScreen
 import com.example.mccagent.ui.screens.SettingsScreen
 import com.example.mccagent.ui.screens.SplashScreen
 import com.example.mccagent.utils.SecureSessionStorage
@@ -41,20 +42,35 @@ fun AppNavigation(context: Context) {
                 }
             )
         }
+
         composable("home") {
             HomeScreen(
                 onLogout = {
                     SessionManager.logout(context)
-
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
+                },
+                onMessages = {
+                    navController.navigate("messages")
                 },
                 onSettings = {
                     navController.navigate("settings")
                 }
             )
         }
+
+        composable("messages") {
+            MessagesScreen(
+                onHome = {
+                    navController.navigate("home")
+                },
+                onSettings = {
+                    navController.navigate("settings")
+                }
+            )
+        }
+
         composable("settings") {
             SettingsScreen(navController = navController, context = context)
         }

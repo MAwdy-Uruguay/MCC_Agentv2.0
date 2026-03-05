@@ -4,14 +4,17 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,8 +43,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mccagent.R
 import com.example.mccagent.repository.ClientRepositoryImpl
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.ui.components.CompanyCard
@@ -62,6 +67,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onSettings: () -> Unit,
+    onMessages: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -110,21 +116,41 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MCC SMS Agent") },
+                title = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_mccagent),
+                            contentDescription = "Logo",
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text("MCC SMS Agent")
+                    }
+                },
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menú")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("Configuración") },
+                            text = { Text("Home") },
+                            onClick = { menuExpanded = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Messages") },
+                            onClick = {
+                                menuExpanded = false
+                                onMessages()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Settings") },
                             onClick = {
                                 menuExpanded = false
                                 onSettings()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Cerrar sesión") },
+                            text = { Text("Cerrar sesion") },
                             onClick = {
                                 menuExpanded = false
                                 showLogoutDialog = true
@@ -169,7 +195,7 @@ fun HomeScreen(
                 Text("SINCRONIZAR AHORA", color = MaterialTheme.colorScheme.onPrimary)
             }
 
-            Text("Teléfonos registrados", style = MaterialTheme.typography.titleMedium)
+            Text("Telefonos registrados", style = MaterialTheme.typography.titleMedium)
             PhonesList(dispositivos = state.devices, idActual = currentDeviceId)
 
             val deviceRegistered = state.devices.any { it.imei == currentDeviceId }
@@ -184,14 +210,14 @@ fun HomeScreen(
         if (showLogoutDialog) {
             AlertDialog(
                 onDismissRequest = { showLogoutDialog = false },
-                title = { Text("¿Cerrar sesión?") },
-                text = { Text("¿Deseas cerrar sesión y detener el servicio de mensajería?") },
+                title = { Text("Cerrar sesion?") },
+                text = { Text("Deseas cerrar sesion y detener el servicio de mensajeria?") },
                 confirmButton = {
                     TextButton(onClick = {
                         showLogoutDialog = false
                         onLogout()
                     }) {
-                        Text("Sí, cerrar", color = RojoCorporativo)
+                        Text("Si, cerrar", color = RojoCorporativo)
                     }
                 },
                 dismissButton = {
