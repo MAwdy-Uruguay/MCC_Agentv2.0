@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -73,8 +71,8 @@ fun PhonesList(dispositivos: List<Device>, idActual: String) {
         return
     }
 
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(dispositivos) { dispositivo ->
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        dispositivos.forEach { dispositivo ->
             val esActual = dispositivo.imei == idActual
             val fondo = if (esActual) FondoActivoSuave else FondoTarjetaSuave
             val borde = if (esActual) BorderStroke(1.dp, RojoCorporativo) else BorderStroke(1.dp, DivisorSuave)

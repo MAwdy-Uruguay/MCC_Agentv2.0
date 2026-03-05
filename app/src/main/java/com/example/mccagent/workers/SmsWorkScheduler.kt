@@ -47,7 +47,6 @@ object SmsWorkScheduler {
             .enqueueUniqueWork(WORK_UNICO_INMEDIATO, ExistingWorkPolicy.REPLACE, request)
     }
 
-
     fun programarSiguienteSincronizacion(context: Context) {
         val request = OneTimeWorkRequestBuilder<SmsSyncWorker>()
             .setInitialDelay(1, TimeUnit.MINUTES)
