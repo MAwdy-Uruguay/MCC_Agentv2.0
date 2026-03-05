@@ -34,6 +34,13 @@ class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
     override suspend fun updateMessageStatus(mid: String, status: String): Boolean {
         return try {
             val response = getApi().updateMessageStatus(mid, MessageStatusUpdateRequest(status))
+            if (!response.isSuccessful) {
+                val detalle = response.errorBody()?.string()?.take(500)
+                Log.e(
+                    "MessageRepo",
+                    "❌ Error al actualizar estado de $mid a $status: ${response.code()} - ${detalle ?: "sin detalle"}"
+                )
+            }
             response.isSuccessful
         } catch (e: Exception) {
             Log.e("MessageRepo", "💥 Excepción al actualizar estado: ${e.message}")
@@ -41,5 +48,4 @@ class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
         }
     }
 }
-
 
