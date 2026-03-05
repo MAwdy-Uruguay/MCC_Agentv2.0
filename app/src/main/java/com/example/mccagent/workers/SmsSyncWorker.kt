@@ -1,6 +1,5 @@
 package com.example.mccagent.workers
 
-
 import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
@@ -46,19 +45,16 @@ class SmsSyncWorker(
             Log.d("SmsSyncWorker", "Mensajes pendientes recibidos: ${messages.size}")
 
             for (msg in messages) {
-                // Marcamos en progreso para reducir riesgo de reenvío por reintentos.
                 val marcadoEnProgreso = repository.updateMessageStatus(msg.mid, "ENVIANDO")
-                if (marcadoEnProgreso) {
-                    sendSMS(context, msg.mid, msg.recipient, msg.body)
-                    delay(1200)
-                } else {
+                if (!marcadoEnProgreso) {
                     Log.w(
                         "SmsSyncWorker",
                         "No se pudo marcar en ENVIANDO el mensaje ${msg.mid}; se intentará despacho igualmente"
                     )
-                    sendSMS(context, msg.mid, msg.recipient, msg.body)
-                    delay(1200)
                 }
+
+                sendSMS(context, msg.mid, msg.recipient, msg.body)
+                delay(1200)
             }
 
             Result.success()
@@ -72,22 +68,30 @@ class SmsSyncWorker(
         val intent = Intent(context, SmsSentReceiver::class.java)
             .setAction(SmsCorrelationKeyFactory.accionConfirmacion(mid))
             .putExtra("mid", mid)
-        val requestCode = SmsCorrelationKeyFactory.requestCode(mid)
+
         val sentIntent = PendingIntent.getBroadcast(
             context,
-            requestCode,
+            SmsCorrelationKeyFactory.requestCode(mid),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Log.d("SmsSyncWorker", "Despachando SMS en Android ${Build.VERSION.SDK_INT} hacia $phone")
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.getSystemService(SmsManager::class.java)
+            } else {
+                SmsManager.getDefault()
             }
-            SmsManager.getDefault().sendTextMessage(phone, null, body, sentIntent, null)
-            Log.i("SmsSyncWorker", "SMS despachado para confirmación de entrega. mid=$mid")
+
+            if (smsManager == null) {
+                Log.e("SmsSyncWorker", "No se obtuvo instancia de SmsManager. mid=$mid")
+                return
+            }
+
+            smsManager.sendTextMessage(phone, null, body, sentIntent, null)
+            Log.i("SmsSyncWorker", "SMS despachado para confirmación de entrega. mid=$mid destino=$phone")
         } catch (e: Exception) {
-            Log.e("SmsSyncWorker", "Error al despachar SMS. mid=$mid", e)
+            Log.e("SmsSyncWorker", "Error al despachar SMS. mid=$mid destino=$phone", e)
         }
     }
 }
