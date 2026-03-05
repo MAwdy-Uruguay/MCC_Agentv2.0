@@ -81,6 +81,7 @@ fun HomeScreen(
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
     fun sincronizarAhora() {
+        SmsWorkScheduler.schedule(context)
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
         estadoServicio.value = if (prefs.getBoolean("sms_service_running", false)) "ACTIVO" else "INACTIVO"
         viewModel.loadClientInfo()
@@ -101,6 +102,8 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
+        SmsWorkScheduler.schedule(context)
+        estadoServicio.value = "ACTIVO"
         sincronizarAhora()
     }
 
@@ -164,13 +167,6 @@ fun HomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = RojoCorporativo)
             ) {
                 Text("SINCRONIZAR AHORA", color = MaterialTheme.colorScheme.onPrimary)
-            }
-
-            OutlinedButton(
-                onClick = onSettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("CONFIGURACIÓN", color = RojoCorporativo)
             }
 
             Text("Teléfonos registrados", style = MaterialTheme.typography.titleMedium)

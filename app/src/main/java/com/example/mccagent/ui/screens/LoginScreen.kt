@@ -20,6 +20,7 @@ import com.example.mccagent.network.RetrofitClient
 import com.example.mccagent.data.LoginRequest
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.utils.SecureSessionStorage
+import com.example.mccagent.ui.theme.RojoCorporativo
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -83,7 +84,11 @@ fun LoginScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onOpenSettings) {
+            FloatingActionButton(
+                onClick = onOpenSettings,
+                containerColor = RojoCorporativo,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Default.Settings, contentDescription = "Configuración")
             }
         }
@@ -154,21 +159,30 @@ fun LoginScreen(
                 onClick = {
                     scope.launch {
                         try {
+                            val urlActiva = ApiConfig.getBaseUrl(context).trim()
+                            if (urlActiva.isBlank()) {
+                                snackbarHostState.showSnackbar("❌ URL de servicio vacía. Revisá Configuración.")
+                                return@launch
+                            }
+
                             val client = OkHttpClient.Builder()
                                 .connectTimeout(5, TimeUnit.SECONDS)
                                 .readTimeout(5, TimeUnit.SECONDS)
                                 .build()
-                            val request = Request.Builder().url(baseUrl).get().build()
+
+                            val request = Request.Builder().url(urlActiva).get().build()
                             client.newCall(request).execute().use { response ->
                                 val message = if (response.isSuccessful) {
-                                    "✅ Conexión OK (${response.code})"
+                                    "✅ Servicio disponible (${response.code})"
                                 } else {
-                                    "⚠️ Respuesta ${response.code}"
+                                    "⚠️ Servicio alcanzable con respuesta ${response.code}"
                                 }
                                 snackbarHostState.showSnackbar(message)
                             }
                         } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("❌ Error de conexión: ${e.message}")
+                            val detalle = e.localizedMessage?.takeIf { it.isNotBlank() }
+                                ?: "No se pudo establecer conexión con la URL configurada"
+                            snackbarHostState.showSnackbar("❌ Error de conexión: $detalle")
                         }
                     }
                 },
