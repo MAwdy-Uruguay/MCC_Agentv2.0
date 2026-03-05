@@ -84,8 +84,18 @@ class MessagesViewModel(private val repository: IMessageRepository) : ViewModel(
         return when (filter) {
             MessageFilter.PENDING -> pendingMessages
             MessageFilter.ALL -> allMessages
-            MessageFilter.SENT -> allMessages.filter { it.status.equals("SENT", ignoreCase = true) }
-            MessageFilter.FAILED -> allMessages.filter { it.status.equals("FAILED", ignoreCase = true) }
+            MessageFilter.SENT -> allMessages.filter {
+                val status = normalizeStatus(it.status)
+                status == "ENVIADO"
+            }
+            MessageFilter.FAILED -> allMessages.filter {
+                val status = normalizeStatus(it.status)
+                status == "FALLIDO"
+            }
         }
+    }
+
+    private fun normalizeStatus(status: String): String {
+        return status.trim().uppercase()
     }
 }
