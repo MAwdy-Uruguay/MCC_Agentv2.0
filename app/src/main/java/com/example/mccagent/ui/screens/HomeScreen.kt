@@ -4,34 +4,59 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mccagent.repository.ClientRepositoryImpl
 import com.example.mccagent.repository.MessageRepositoryImpl
-import com.example.mccagent.utils.registrarEsteDispositivo
+import com.example.mccagent.ui.components.CompanyCard
+import com.example.mccagent.ui.components.DialogRegistrarTelefono
+import com.example.mccagent.ui.components.PhonesList
+import com.example.mccagent.ui.components.SystemFooterStatus
+import com.example.mccagent.ui.theme.FondoBlanco
+import com.example.mccagent.ui.theme.RojoCorporativo
 import com.example.mccagent.viewmodels.ClientViewModel
 import com.example.mccagent.viewmodels.ClientViewModelFactory
-import com.example.mccagent.ui.components.DialogRegistrarTelefono
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.example.mccagent.workers.SmsWorkScheduler
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,50 +65,54 @@ fun HomeScreen(
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel: ClientViewModel = viewModel(
-        factory = ClientViewModelFactory(ClientRepositoryImpl(context))
-    )
+    val viewModel: ClientViewModel = viewModel(factory = ClientViewModelFactory(ClientRepositoryImpl(context)))
 
     var menuExpanded by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val mostrarDialogoNumero = remember { mutableStateOf(false) }
-    val isRefreshing = remember { mutableStateOf(false) }
 
-    val serviceRunning = remember { mutableStateOf(false) }
-    val lastSyncLabel = remember { mutableStateOf("Sin sincronización") }
-    val pendingCount = remember { mutableStateOf(0) }
+    val estadoServicio = remember { mutableStateOf("INACTIVO") }
+    val ultimaConsulta = remember { mutableStateOf("Sin consulta") }
+    val pendientes = remember { mutableStateOf(0) }
+    val errorSincronizacion = remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     val state by viewModel.clientState.collectAsState()
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
-    fun refreshData() {
+    fun sincronizarAhora() {
         val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        serviceRunning.value = prefs.getBoolean("sms_service_running", false)
+        estadoServicio.value = if (prefs.getBoolean("sms_service_running", false)) "ACTIVO" else "INACTIVO"
         viewModel.loadClientInfo()
+        SmsWorkScheduler.ejecutarSincronizacionInmediata(context)
+
         scope.launch {
-            pendingCount.value = MessageRepositoryImpl(context).getPendingMessages().size
+            try {
+                pendientes.value = MessageRepositoryImpl(context).getPendingMessages().size
+                errorSincronizacion.value = null
+            } catch (e: Exception) {
+                errorSincronizacion.value = "No se pudo consultar pendientes"
+                Log.e("HomeScreen", "Error al refrescar pendientes", e)
+            }
+
+            val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+            ultimaConsulta.value = formatter.format(Date())
         }
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        lastSyncLabel.value = "Última sincronización: ${formatter.format(Date())}"
     }
 
     LaunchedEffect(Unit) {
-        refreshData()
+        sincronizarAhora()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("📨 MCC Agent") },
+                title = { Text("MCC SMS Agent") },
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Menú")
                     }
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
                             text = { Text("Configuración") },
                             onClick = {
@@ -99,160 +128,74 @@ fun HomeScreen(
                             }
                         )
                     }
-
                 }
             )
         },
-        floatingActionButton = {
+        bottomBar = {
+            SystemFooterStatus(
+                estadoServicio = if (state.error != null) "ERROR" else estadoServicio.value,
+                pendientes = pendientes.value,
+                ultimaConsulta = ultimaConsulta.value,
+                error = state.error ?: errorSincronizacion.value
+            )
+        },
+        containerColor = FondoBlanco
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(FondoBlanco)
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            CompanyCard(
+                nombreEmpresa = state.clientName,
+                subtitulo = "SMS Payment Link Gateway"
+            )
+
+            Button(
+                onClick = { sincronizarAhora() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = RojoCorporativo)
+            ) {
+                Text("SINCRONIZAR AHORA", color = MaterialTheme.colorScheme.onPrimary)
+            }
+
+            OutlinedButton(
+                onClick = onSettings,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("CONFIGURACIÓN", color = RojoCorporativo)
+            }
+
+            Text("Teléfonos registrados", style = MaterialTheme.typography.titleMedium)
+            PhonesList(dispositivos = state.devices, idActual = currentDeviceId)
+
             val deviceRegistered = state.devices.any { it.imei == currentDeviceId }
             if (!deviceRegistered) {
-                FloatingActionButton(
-                    onClick = {
-                        registrarEsteDispositivo(
-                            context = context,
-                            numero = "",
-                            onRequestNumero = {
-                                mostrarDialogoNumero.value = true
-                            },
-                            onSuccess = {
-                                mostrarDialogoNumero.value = false
-                                viewModel.loadClientInfo()
-                            },
-                            onError = {
-                                Log.e("Registrar", it)
-                            }
-                        )
-                    },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar dispositivo")
+                OutlinedButton(onClick = { mostrarDialogoNumero.value = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("REGISTRAR ESTE DISPOSITIVO", color = RojoCorporativo)
                 }
             }
-        },
-        floatingActionButtonPosition = FabPosition.Center,
-        bottomBar = {
-            Surface(
-                color = Color(0xFFF8F8F8),
-                tonalElevation = 4.dp,
-                shadowElevation = 6.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (serviceRunning.value) "🟢 SMS activo" else "🔴 SMS detenido",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (serviceRunning.value) Color(0xFF2E7D32) else Color.Red
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(lastSyncLabel.value, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            text = "Pendientes: ${pendingCount.value}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = { refreshData() }
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(isRefreshing.value),
-            onRefresh = {
-                isRefreshing.value = true
-                refreshData()
-                isRefreshing.value = false
-            }
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .padding(16.dp)
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator()
-                } else if (state.error != null) {
-                    Text("❌ ${state.error}", color = MaterialTheme.colorScheme.error)
-                } else {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE1F5FE))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("🏢 Empresa", style = MaterialTheme.typography.titleMedium)
-                            Text(state.clientName, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = if (state.devices.isNotEmpty()) "🟢 ACTIVO" else "🔴 INACTIVO",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text("📱 Dispositivos registrados:", style = MaterialTheme.typography.titleMedium)
-
-                    if (state.devices.isEmpty()) {
-                        Text("⚠️ No hay dispositivos registrados.")
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(state.devices) { device ->
-                                val isCurrent = device.imei == currentDeviceId
-                                val border = if (isCurrent) BorderStroke(2.dp, Color.Green) else null
-                                val bgColor = if (isCurrent) Color(0xFFDFFFE0) else Color.Transparent
-
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 6.dp),
-                                    border = border,
-                                    colors = CardDefaults.cardColors(containerColor = bgColor)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.PhoneAndroid,
-                                            contentDescription = "Dispositivo",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(device.name)
-                                            Text("IMEI: ${device.imei}")
-                                            if (isCurrent) {
-                                                Text("📍 Este dispositivo", color = Color.Green)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (showLogoutDialog) {
             AlertDialog(
                 onDismissRequest = { showLogoutDialog = false },
                 title = { Text("¿Cerrar sesión?") },
-                text = { Text("¿Estás seguro que querés cerrar sesión y detener el servicio de mensajería?") },
+                text = { Text("¿Deseas cerrar sesión y detener el servicio de mensajería?") },
                 confirmButton = {
                     TextButton(onClick = {
                         showLogoutDialog = false
                         onLogout()
                     }) {
-                        Text("Sí, cerrar", color = MaterialTheme.colorScheme.error)
+                        Text("Sí, cerrar", color = RojoCorporativo)
                     }
                 },
                 dismissButton = {
@@ -268,7 +211,7 @@ fun HomeScreen(
                 onDismiss = { mostrarDialogoNumero.value = false },
                 onSuccess = {
                     mostrarDialogoNumero.value = false
-                    viewModel.loadClientInfo()
+                    sincronizarAhora()
                 }
             )
         }

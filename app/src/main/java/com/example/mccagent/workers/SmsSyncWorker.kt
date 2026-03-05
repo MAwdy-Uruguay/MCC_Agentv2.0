@@ -57,10 +57,20 @@ class SmsSyncWorker(
                 delay(1200)
             }
 
+            programarProximoCiclo(context)
             Result.success()
         } catch (e: Exception) {
             Log.e("SmsSyncWorker", "Fallo en sincronización de SMS", e)
+            programarProximoCiclo(context)
             Result.retry()
+        }
+    }
+
+    private fun programarProximoCiclo(context: Context) {
+        val flujoActivo = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
+            .getBoolean("sms_service_running", false)
+        if (flujoActivo) {
+            SmsWorkScheduler.programarSiguienteSincronizacion(context)
         }
     }
 
