@@ -14,7 +14,10 @@ import java.util.concurrent.TimeUnit
 object SmsWorkScheduler {
     private const val WORK_NAME = "sms_sync_periodico"
     private const val WORK_UNICO_INMEDIATO = "sms_sync_inmediato"
+<<<<<<< codex/investigar-envio-de-sms-pendientes-o0b2fx
     private const val WORK_UNICO_CADA_MINUTO = "sms_sync_cada_minuto"
+=======
+>>>>>>> dev1.2
 
     fun schedule(context: Context) {
         val constraints = Constraints.Builder()
@@ -30,7 +33,10 @@ object SmsWorkScheduler {
             .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
 
         ejecutarSincronizacionInmediata(context)
+<<<<<<< codex/investigar-envio-de-sms-pendientes-o0b2fx
         programarSiguienteSincronizacion(context)
+=======
+>>>>>>> dev1.2
 
         context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             .edit()
@@ -47,6 +53,7 @@ object SmsWorkScheduler {
             .enqueueUniqueWork(WORK_UNICO_INMEDIATO, ExistingWorkPolicy.REPLACE, request)
     }
 
+<<<<<<< codex/investigar-envio-de-sms-pendientes-o0b2fx
     fun programarSiguienteSincronizacion(context: Context) {
         val request = OneTimeWorkRequestBuilder<SmsSyncWorker>()
             .setInitialDelay(1, TimeUnit.MINUTES)
@@ -61,6 +68,11 @@ object SmsWorkScheduler {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         WorkManager.getInstance(context).cancelUniqueWork(WORK_UNICO_INMEDIATO)
         WorkManager.getInstance(context).cancelUniqueWork(WORK_UNICO_CADA_MINUTO)
+=======
+    fun stop(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_UNICO_INMEDIATO)
+>>>>>>> dev1.2
 
         context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
             .edit()
