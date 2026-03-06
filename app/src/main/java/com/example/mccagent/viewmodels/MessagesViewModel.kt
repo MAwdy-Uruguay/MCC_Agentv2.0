@@ -10,16 +10,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class MessageFilter {
-    PENDING ,
+    PENDING,
     SENT,
     FAILED,
     ALL
+}
+
+enum class MessageSortOrder {
+    DATE_DESC,
+    DATE_ASC
 }
 
 data class MessagesUiState(
     val messages: List<Message> = emptyList(),
     val loading: Boolean = false,
     val filter: MessageFilter = MessageFilter.PENDING,
+    val sortOrder: MessageSortOrder = MessageSortOrder.DATE_DESC,
     val error: String? = null
 )
 
@@ -47,7 +53,10 @@ class MessagesViewModel(private val repository: IMessageRepository) : ViewModel(
                     MessageFilter.ALL, MessageFilter.SENT, MessageFilter.FAILED -> allMessages = repository.getAllMessages()
                 }
 
-                filteredMessages = applyFilter(filter)
+                filteredMessages = applySort(
+                    applyFilter(filter),
+                    _uiState.value.sortOrder
+                )
                 visibleCount = minOf(pageSize, filteredMessages.size)
                 _uiState.update {
                     it.copy(
@@ -72,6 +81,18 @@ class MessagesViewModel(private val repository: IMessageRepository) : ViewModel(
         loadMessages(filter)
     }
 
+    fun updateSortOrder(sortOrder: MessageSortOrder) {
+        val currentFilter = _uiState.value.filter
+        filteredMessages = applySort(applyFilter(currentFilter), sortOrder)
+        visibleCount = minOf(visibleCount.coerceAtLeast(pageSize), filteredMessages.size)
+        _uiState.update {
+            it.copy(
+                sortOrder = sortOrder,
+                messages = filteredMessages.take(visibleCount)
+            )
+        }
+    }
+
     fun loadMore() {
         if (_uiState.value.loading) return
         if (visibleCount >= filteredMessages.size) return
@@ -85,14 +106,23 @@ class MessagesViewModel(private val repository: IMessageRepository) : ViewModel(
             MessageFilter.PENDING -> pendingMessages
             MessageFilter.ALL -> allMessages
             MessageFilter.SENT -> allMessages.filter {
-                val status = normalizeStatus(it.status)
-                status == "ENVIADO"
+                normalizeStatus(it.status) == "ENVIADO"
             }
             MessageFilter.FAILED -> allMessages.filter {
-                val status = normalizeStatus(it.status)
-                status == "FALLIDO"
+                normalizeStatus(it.status) == "FALLIDO"
             }
         }
+    }
+
+    private fun applySort(messages: List<Message>, sortOrder: MessageSortOrder): List<Message> {
+        return when (sortOrder) {
+            MessageSortOrder.DATE_DESC -> messages.sortedByDescending { messageDateKey(it) }
+            MessageSortOrder.DATE_ASC -> messages.sortedBy { messageDateKey(it) }
+        }
+    }
+
+    private fun messageDateKey(message: Message): String {
+        return message.createdAt ?: message.sentAt ?: ""
     }
 
     private fun normalizeStatus(status: String): String {

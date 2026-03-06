@@ -43,6 +43,7 @@ import com.example.mccagent.R
 import com.example.mccagent.models.entities.Message
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.viewmodels.MessageFilter
+import com.example.mccagent.viewmodels.MessageSortOrder
 import com.example.mccagent.viewmodels.MessagesViewModel
 import com.example.mccagent.viewmodels.MessagesViewModelFactory
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -62,6 +63,7 @@ fun MessagesScreen(
     val listState = rememberLazyListState()
     var menuExpanded by remember { mutableStateOf(false) }
     var filterExpanded by remember { mutableStateOf(false) }
+    var sortExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(listState, uiState.messages.size, uiState.loading) {
         snapshotFlow {
@@ -124,9 +126,15 @@ fun MessagesScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            OutlinedButton(onClick = { filterExpanded = true }) {
-                Text("Filtro: ${filterLabel(uiState.filter)}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { filterExpanded = true }) {
+                    Text("Filtro: ${filterLabel(uiState.filter)}")
+                }
+                OutlinedButton(onClick = { sortExpanded = true }) {
+                    Text("Orden: ${sortLabel(uiState.sortOrder)}")
+                }
             }
+
             DropdownMenu(expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
                 DropdownMenuItem(text = { Text("Pendiente") }, onClick = {
                     filterExpanded = false
@@ -143,6 +151,17 @@ fun MessagesScreen(
                 DropdownMenuItem(text = { Text("Todos") }, onClick = {
                     filterExpanded = false
                     viewModel.updateFilter(MessageFilter.ALL)
+                })
+            }
+
+            DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
+                DropdownMenuItem(text = { Text("Fecha/hora: mas recientes") }, onClick = {
+                    sortExpanded = false
+                    viewModel.updateSortOrder(MessageSortOrder.DATE_DESC)
+                })
+                DropdownMenuItem(text = { Text("Fecha/hora: mas antiguos") }, onClick = {
+                    sortExpanded = false
+                    viewModel.updateSortOrder(MessageSortOrder.DATE_ASC)
                 })
             }
 
@@ -188,6 +207,13 @@ private fun filterLabel(filter: MessageFilter): String {
         MessageFilter.SENT -> "Enviado"
         MessageFilter.FAILED -> "Fallido"
         MessageFilter.ALL -> "Todos"
+    }
+}
+
+private fun sortLabel(sortOrder: MessageSortOrder): String {
+    return when (sortOrder) {
+        MessageSortOrder.DATE_DESC -> "Mas recientes"
+        MessageSortOrder.DATE_ASC -> "Mas antiguos"
     }
 }
 
