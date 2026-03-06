@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mccagent.ui.screens.HomeScreen
 import com.example.mccagent.ui.screens.LoginScreen
 import com.example.mccagent.ui.screens.MessagesScreen
+import com.example.mccagent.ui.screens.RealTimeMessagesScreen
 import com.example.mccagent.ui.screens.SettingsScreen
 import com.example.mccagent.ui.screens.SplashScreen
 import com.example.mccagent.utils.SecureSessionStorage
@@ -54,6 +55,9 @@ fun AppNavigation(context: Context) {
                 onMessages = {
                     navController.navigate("messages")
                 },
+                onRealTime = {
+                    navController.navigate("real_time")
+                },
                 onSettings = {
                     navController.navigate("settings")
                 }
@@ -64,6 +68,23 @@ fun AppNavigation(context: Context) {
             MessagesScreen(
                 onHome = {
                     navController.navigate("home")
+                },
+                onRealTime = {
+                    navController.navigate("real_time")
+                },
+                onSettings = {
+                    navController.navigate("settings")
+                }
+            )
+        }
+
+        composable("real_time") {
+            RealTimeMessagesScreen(
+                onHome = {
+                    navController.navigate("home")
+                },
+                onMessages = {
+                    navController.navigate("messages")
                 },
                 onSettings = {
                     navController.navigate("settings")
