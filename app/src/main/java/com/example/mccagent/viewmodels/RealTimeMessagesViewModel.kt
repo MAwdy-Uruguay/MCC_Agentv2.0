@@ -27,6 +27,7 @@ class RealTimeMessagesViewModel(
     val uiState: StateFlow<RealTimeUiState> = _uiState
 
     private val trackedMessages = linkedMapOf<String, Message>()
+    private val sentCompletedAt = mutableMapOf<String, Long>()
     private var pollingJob: Job? = null
 
     fun startMonitoring() {
@@ -48,6 +49,7 @@ class RealTimeMessagesViewModel(
 
     private suspend fun refresh() {
         try {
+            val now = System.currentTimeMillis()
             val pending = repository.getPendingMessages()
             val allMessages = repository.getAllMessages()
             val allById = allMessages.associateBy { it.id }
@@ -58,12 +60,33 @@ class RealTimeMessagesViewModel(
             }
 
             // Actualiza estado de todos los que ya estaban en monitoreo.
-            val ids = trackedMessages.keys.toList()
-            ids.forEach { id ->
+            trackedMessages.keys.toList().forEach { id ->
                 val updated = allById[id]
                 if (updated != null) {
                     trackedMessages[id] = updated
                 }
+            }
+
+            // Marca cuando un mensaje llega a ENVIADO y lo elimina luego de 3s.
+            trackedMessages.forEach { (id, message) ->
+                val status = normalizeStatus(message.status)
+                if (status == "ENVIADO") {
+                    if (!sentCompletedAt.containsKey(id)) {
+                        sentCompletedAt[id] = now
+                    }
+                } else {
+                    sentCompletedAt.remove(id)
+                }
+            }
+
+            val toRemove = sentCompletedAt
+                .filterValues { now - it >= 3000L }
+                .keys
+                .toList()
+
+            toRemove.forEach { id ->
+                trackedMessages.remove(id)
+                sentCompletedAt.remove(id)
             }
 
             val ordered = trackedMessages.values
@@ -87,6 +110,10 @@ class RealTimeMessagesViewModel(
                 )
             }
         }
+    }
+
+    private fun normalizeStatus(status: String): String {
+        return status.trim().uppercase()
     }
 
     override fun onCleared() {

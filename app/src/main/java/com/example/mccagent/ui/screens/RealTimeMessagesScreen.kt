@@ -1,7 +1,9 @@
 package com.example.mccagent.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -157,6 +161,10 @@ fun RealTimeMessagesScreen(
 
 @Composable
 private fun RealTimeMessageItem(message: Message) {
+    val normalizedStatus = message.status.trim().uppercase()
+    val backgroundColor = statusColor(normalizedStatus)
+    val textColor = if (normalizedStatus == "ENVIANDO") Color.Black else Color.White
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,7 +172,27 @@ private fun RealTimeMessageItem(message: Message) {
     ) {
         Text("Subject: ${message.subject}", style = MaterialTheme.typography.titleSmall)
         Text("Recipient: ${message.recipient}", style = MaterialTheme.typography.bodyMedium)
-        Text("Status: ${message.status}", style = MaterialTheme.typography.bodyMedium)
+
+        Box(
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .background(backgroundColor, RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Text("${message.status}", color = textColor, style = MaterialTheme.typography.labelMedium)
+        }
+
         Text("Fecha: ${message.createdAt ?: "-"}", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+private fun statusColor(status: String): Color {
+    return when (status) {
+        "PENDIENTE" -> Color(0xFF8E24AA)
+        "ENVIANDO" -> Color(0xFFFDD835)
+        "ENVIADO" -> Color(0xFF2E7D32)
+        "FALLIDO" -> Color(0xFFC62828)
+        "CANCELADO" -> Color(0xFF000000)
+        else -> Color(0xFF616161)
     }
 }
