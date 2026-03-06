@@ -68,6 +68,7 @@ import java.util.Locale
 fun HomeScreen(
     onSettings: () -> Unit,
     onMessages: () -> Unit,
+    onRealTime: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -140,6 +141,13 @@ fun HomeScreen(
                             onClick = {
                                 menuExpanded = false
                                 onMessages()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Real Time") },
+                            onClick = {
+                                menuExpanded = false
+                                onRealTime()
                             }
                         )
                         DropdownMenuItem(

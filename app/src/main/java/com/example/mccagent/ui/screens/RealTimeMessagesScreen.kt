@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,18 +21,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -42,42 +39,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mccagent.R
 import com.example.mccagent.models.entities.Message
 import com.example.mccagent.repository.MessageRepositoryImpl
-import com.example.mccagent.viewmodels.MessageFilter
-import com.example.mccagent.viewmodels.MessageSortOrder
-import com.example.mccagent.viewmodels.MessagesViewModel
-import com.example.mccagent.viewmodels.MessagesViewModelFactory
-import kotlinx.coroutines.flow.distinctUntilChanged
+import com.example.mccagent.viewmodels.RealTimeMessagesViewModel
+import com.example.mccagent.viewmodels.RealTimeMessagesViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessagesScreen(
+fun RealTimeMessagesScreen(
     onHome: () -> Unit,
-    onRealTime: () -> Unit,
+    onMessages: () -> Unit,
     onSettings: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel: MessagesViewModel = viewModel(
-        factory = MessagesViewModelFactory(MessageRepositoryImpl(context))
+    val viewModel: RealTimeMessagesViewModel = viewModel(
+        factory = RealTimeMessagesViewModelFactory(MessageRepositoryImpl(context))
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    val listState = rememberLazyListState()
     var menuExpanded by remember { mutableStateOf(false) }
-    var filterExpanded by remember { mutableStateOf(false) }
-    var sortExpanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(listState, uiState.messages.size, uiState.loading) {
-        snapshotFlow {
-            val total = listState.layoutInfo.totalItemsCount
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && lastVisible >= total - 3
+    DisposableEffect(Unit) {
+        viewModel.startMonitoring()
+        onDispose {
+            viewModel.stopMonitoring()
         }
-            .distinctUntilChanged()
-            .collect { nearEnd ->
-                if (nearEnd && !uiState.loading) {
-                    viewModel.loadMore()
-                }
-            }
     }
 
     Scaffold(
@@ -90,7 +74,7 @@ fun MessagesScreen(
                             contentDescription = "Logo",
                             modifier = Modifier.size(28.dp)
                         )
-                        Text("Mensajes")
+                        Text("Real Time")
                     }
                 },
                 actions = {
@@ -107,14 +91,14 @@ fun MessagesScreen(
                         )
                         DropdownMenuItem(
                             text = { Text("Messages") },
-                            onClick = { menuExpanded = false }
+                            onClick = {
+                                menuExpanded = false
+                                onMessages()
+                            }
                         )
                         DropdownMenuItem(
                             text = { Text("Real Time") },
-                            onClick = {
-                                menuExpanded = false
-                                onRealTime()
-                            }
+                            onClick = { menuExpanded = false }
                         )
                         DropdownMenuItem(
                             text = { Text("Settings") },
@@ -134,49 +118,20 @@ fun MessagesScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { filterExpanded = true }) {
-                    Text("Filtro: ${filterLabel(uiState.filter)}")
-                }
-                OutlinedButton(onClick = { sortExpanded = true }) {
-                    Text("Orden: ${sortLabel(uiState.sortOrder)}")
-                }
-            }
-
-            DropdownMenu(expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
-                DropdownMenuItem(text = { Text("Pendiente") }, onClick = {
-                    filterExpanded = false
-                    viewModel.updateFilter(MessageFilter.PENDING)
-                })
-                DropdownMenuItem(text = { Text("Enviado") }, onClick = {
-                    filterExpanded = false
-                    viewModel.updateFilter(MessageFilter.SENT)
-                })
-                DropdownMenuItem(text = { Text("Fallido") }, onClick = {
-                    filterExpanded = false
-                    viewModel.updateFilter(MessageFilter.FAILED)
-                })
-                DropdownMenuItem(text = { Text("Todos") }, onClick = {
-                    filterExpanded = false
-                    viewModel.updateFilter(MessageFilter.ALL)
-                })
-            }
-
-            DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
-                DropdownMenuItem(text = { Text("Fecha/hora: mas recientes") }, onClick = {
-                    sortExpanded = false
-                    viewModel.updateSortOrder(MessageSortOrder.DATE_DESC)
-                })
-                DropdownMenuItem(text = { Text("Fecha/hora: mas antiguos") }, onClick = {
-                    sortExpanded = false
-                    viewModel.updateSortOrder(MessageSortOrder.DATE_ASC)
-                })
-            }
-
+            Text(
+                text = "Monitoreo de pendientes (actualiza cada 3s)",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Ultima actualizacion: ${uiState.lastUpdate}",
+                style = MaterialTheme.typography.bodySmall
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             if (uiState.loading && uiState.messages.isEmpty()) {
                 CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (!uiState.error.isNullOrBlank()) {
@@ -189,44 +144,19 @@ fun MessagesScreen(
             }
 
             LazyColumn(
-                state = listState,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(uiState.messages, key = { it.id }) { message ->
-                    MessageItem(message = message)
-                }
-
-                if (uiState.loading && uiState.messages.isNotEmpty()) {
-                    item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        }
-                    }
+                    RealTimeMessageItem(message)
                 }
             }
         }
     }
 }
 
-private fun filterLabel(filter: MessageFilter): String {
-    return when (filter) {
-        MessageFilter.PENDING -> "Pendiente"
-        MessageFilter.SENT -> "Enviado"
-        MessageFilter.FAILED -> "Fallido"
-        MessageFilter.ALL -> "Todos"
-    }
-}
-
-private fun sortLabel(sortOrder: MessageSortOrder): String {
-    return when (sortOrder) {
-        MessageSortOrder.DATE_DESC -> "Mas recientes"
-        MessageSortOrder.DATE_ASC -> "Mas antiguos"
-    }
-}
-
 @Composable
-private fun MessageItem(message: Message) {
+private fun RealTimeMessageItem(message: Message) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,7 +164,7 @@ private fun MessageItem(message: Message) {
     ) {
         Text("Subject: ${message.subject}", style = MaterialTheme.typography.titleSmall)
         Text("Recipient: ${message.recipient}", style = MaterialTheme.typography.bodyMedium)
-        Text("Body: ${message.body}", style = MaterialTheme.typography.bodyMedium)
         Text("Status: ${message.status}", style = MaterialTheme.typography.bodyMedium)
+        Text("Fecha: ${message.createdAt ?: "-"}", style = MaterialTheme.typography.bodySmall)
     }
 }
