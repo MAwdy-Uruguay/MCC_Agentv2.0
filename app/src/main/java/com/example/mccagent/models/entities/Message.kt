@@ -10,4 +10,7 @@ data class Message(
     val sentAt: String?,
     val createdAt: String?,
     val updatedAt: String?
-)
+) {
+    val id: String
+        get() = mid
+}

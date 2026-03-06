@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import android.net.Uri
@@ -17,7 +16,6 @@ import com.example.mccagent.config.ApiConfig
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController, context: Context) {
-    val context = LocalContext.current
     val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
 
     // Estados para cada URL
@@ -170,7 +168,7 @@ fun SettingsScreen(navController: NavController, context: Context) {
                                 ApiConfig.Environment.DEV -> devUrl
                             }
                         )
-                        .apply()
+                        .commit()
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth(),

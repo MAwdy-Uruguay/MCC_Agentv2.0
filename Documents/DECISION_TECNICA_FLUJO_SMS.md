@@ -16,7 +16,7 @@ Se adopta **WorkManager** como único mecanismo activo para sincronización y en
 2. Se configura un trabajo periódico único (`sms_sync_periodico`) con `ExistingPeriodicWorkPolicy.KEEP`.
 3. Se mantiene una bandera de estado (`sms_service_running`) para decidir, tras reinicio, si se reprograma el flujo.
 4. En cada ciclo, el worker marca el mensaje como `ENVIANDO` antes del despacho para disminuir reenvíos por reintentos.
-5. Se usa `requestCode` por `mid` en `PendingIntent` para aislar confirmaciones por mensaje.
+5. Se usa `requestCode` por `mid` en `PendingIntent` y una `action` única por `mid` para aislar confirmaciones por mensaje incluso ante colisiones de hash.
 
 ## Garantías frente a duplicados
 - No hay competencia entre worker y servicio porque el servicio fue retirado.
@@ -26,3 +26,8 @@ Se adopta **WorkManager** como único mecanismo activo para sincronización y en
 ## Comportamiento tras reinicio
 - `BootReceiver` reprograma el flujo solo si la bandera de ejecución activa está habilitada.
 - Con esto se conserva operación tras reinicio sin activar envíos cuando el flujo fue detenido por cierre de sesión.
+
+
+## Validación de correlación
+- Se agregó una prueba unitaria con colisión conocida de `hashCode` (`"FB"` y `"Ea"`) para verificar que la clave compuesta de correlación no colisiona.
+- Se simuló un lote con resultados mixtos (`ENVIADO`/`FALLIDO`) para validar correlación uno-a-uno por mensaje.
