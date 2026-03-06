@@ -87,7 +87,7 @@ fun MessagesScreen(
                             contentDescription = "Logo",
                             modifier = Modifier.size(28.dp)
                         )
-                        Text("Messages")
+                        Text("Mensajes")
                     }
                 },
                 actions = {
@@ -125,22 +125,22 @@ fun MessagesScreen(
                 .padding(16.dp)
         ) {
             OutlinedButton(onClick = { filterExpanded = true }) {
-                Text("Filter: ${uiState.filter.name}")
+                Text("Filtro: ${filterLabel(uiState.filter)}")
             }
             DropdownMenu(expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
-                DropdownMenuItem(text = { Text("Pending") }, onClick = {
+                DropdownMenuItem(text = { Text("Pendiente") }, onClick = {
                     filterExpanded = false
                     viewModel.updateFilter(MessageFilter.PENDING)
                 })
-                DropdownMenuItem(text = { Text("Sent") }, onClick = {
+                DropdownMenuItem(text = { Text("Enviado") }, onClick = {
                     filterExpanded = false
                     viewModel.updateFilter(MessageFilter.SENT)
                 })
-                DropdownMenuItem(text = { Text("Failed") }, onClick = {
+                DropdownMenuItem(text = { Text("Fallido") }, onClick = {
                     filterExpanded = false
                     viewModel.updateFilter(MessageFilter.FAILED)
                 })
-                DropdownMenuItem(text = { Text("All") }, onClick = {
+                DropdownMenuItem(text = { Text("Todos") }, onClick = {
                     filterExpanded = false
                     viewModel.updateFilter(MessageFilter.ALL)
                 })
@@ -179,6 +179,15 @@ fun MessagesScreen(
                 }
             }
         }
+    }
+}
+
+private fun filterLabel(filter: MessageFilter): String {
+    return when (filter) {
+        MessageFilter.PENDING -> "Pendiente"
+        MessageFilter.SENT -> "Enviado"
+        MessageFilter.FAILED -> "Fallido"
+        MessageFilter.ALL -> "Todos"
     }
 }
 
