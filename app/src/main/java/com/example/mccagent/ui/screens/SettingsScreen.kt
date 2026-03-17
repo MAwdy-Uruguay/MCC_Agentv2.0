@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mccagent.config.ApiConfig
+import com.example.mccagent.config.ServiceConfig
+import com.example.mccagent.services.BatteryOptimizationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +50,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
     var apiKeyHeader by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     var selectedEnv by remember { mutableStateOf(ApiConfig.Environment.DEV) }
+    var heartbeatEnabled by remember { mutableStateOf(true) }
+    var heartbeatVolume by remember { mutableFloatStateOf(15f) }
 
     LaunchedEffect(Unit) {
         prodUrl = prefs.getString("url_prod", "") ?: ""
@@ -55,6 +63,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
         selectedEnv = ApiConfig.Environment.fromRaw(
             prefs.getString("env", ApiConfig.Environment.DEV.rawValue)
         )
+        heartbeatEnabled = ServiceConfig.isHeartbeatEnabled(context)
+        heartbeatVolume = ServiceConfig.getHeartbeatVolume(context).toFloat()
     }
 
     fun isValidUrl(value: String): Boolean {
@@ -96,11 +106,7 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = prodUrlError,
-                supportingText = {
-                    if (prodUrlError) {
-                        Text("URL invalida")
-                    }
-                }
+                supportingText = { if (prodUrlError) Text("URL invalida") }
             )
             EnvironmentOption(
                 text = "Usar Produccion",
@@ -117,11 +123,7 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = preprodUrlError,
-                supportingText = {
-                    if (preprodUrlError) {
-                        Text("URL invalida")
-                    }
-                }
+                supportingText = { if (preprodUrlError) Text("URL invalida") }
             )
             EnvironmentOption(
                 text = "Usar Preproduccion",
@@ -138,11 +140,7 @@ fun SettingsScreen(navController: NavController, context: Context) {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = devUrlError,
-                supportingText = {
-                    if (devUrlError) {
-                        Text("URL invalida")
-                    }
-                }
+                supportingText = { if (devUrlError) Text("URL invalida") }
             )
             EnvironmentOption(
                 text = "Usar Desarrollo",
@@ -172,6 +170,56 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
             Spacer(Modifier.height(24.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Bip en cada consulta", style = MaterialTheme.typography.bodyLarge)
+                Switch(
+                    checked = heartbeatEnabled,
+                    onCheckedChange = { heartbeatEnabled = it }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text("Volumen del bip: ${heartbeatVolume.toInt()}%", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = heartbeatVolume,
+                onValueChange = { heartbeatVolume = it },
+                valueRange = 0f..100f
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = { BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Excluir de ahorro de bateria")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { BatteryOptimizationHelper.openSamsungBatterySettings(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Abrir ajustes Samsung")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { BatteryOptimizationHelper.openAppDetails(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Abrir detalles de la app")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
             val activeUrl = when (selectedEnv) {
                 ApiConfig.Environment.PROD -> prodUrl
                 ApiConfig.Environment.PREPROD -> preprodUrl
@@ -195,6 +243,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
                         .putString("env", selectedEnv.rawValue)
                         .putString("base_url", activeUrl)
                         .commit()
+                    ServiceConfig.setHeartbeatEnabled(context, heartbeatEnabled)
+                    ServiceConfig.setHeartbeatVolume(context, heartbeatVolume.toInt())
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +262,7 @@ private fun EnvironmentOption(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         RadioButton(
             selected = selected,
             onClick = onClick

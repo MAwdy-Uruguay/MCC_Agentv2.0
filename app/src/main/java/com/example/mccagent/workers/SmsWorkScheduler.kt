@@ -4,67 +4,46 @@ import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.mccagent.config.ServiceConfig
+import com.example.mccagent.services.PersistentSmsService
 import java.util.concurrent.TimeUnit
 
 object SmsWorkScheduler {
-    private const val WORK_NAME = "sms_sync_periodico"
-    private const val WORK_UNICO_INMEDIATO = "sms_sync_inmediato"
-    private const val WORK_UNICO_CADA_MINUTO = "sms_sync_cada_minuto"
+    private const val WORK_SERVICE_WATCHDOG = "sms_service_watchdog"
 
     fun schedule(context: Context) {
+        ServiceConfig.setServiceEnabled(context, true)
+        PersistentSmsService.start(context)
+        scheduleWatchdog(context)
+    }
+
+    fun ejecutarSincronizacionInmediata(context: Context) {
+        PersistentSmsService.requestImmediateSync(context)
+    }
+
+    fun stop(context: Context) {
+        PersistentSmsService.stop(context)
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_SERVICE_WATCHDOG)
+    }
+
+    private fun scheduleWatchdog(context: Context) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<SmsSyncWorker>(1, TimeUnit.MINUTES)
+        val request = PeriodicWorkRequestBuilder<ServiceWatchdogWorker>(15, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
-
-        ejecutarSincronizacionInmediata(context)
-        programarSiguienteSincronizacion(context)
-
-        context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("sms_service_running", true)
-            .apply()
-    }
-
-    fun ejecutarSincronizacionInmediata(context: Context) {
-        val request = OneTimeWorkRequestBuilder<SmsSyncWorker>()
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork(WORK_UNICO_INMEDIATO, ExistingWorkPolicy.REPLACE, request)
-    }
-
-    fun programarSiguienteSincronizacion(context: Context) {
-        val request = OneTimeWorkRequestBuilder<SmsSyncWorker>()
-            .setInitialDelay(1, TimeUnit.MINUTES)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork(WORK_UNICO_CADA_MINUTO, ExistingWorkPolicy.REPLACE, request)
-    }
-
-    fun stop(context: Context) {
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_UNICO_INMEDIATO)
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_UNICO_CADA_MINUTO)
-
-        context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("sms_service_running", false)
-            .apply()
+            .enqueueUniquePeriodicWork(
+                WORK_SERVICE_WATCHDOG,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                request
+            )
     }
 }

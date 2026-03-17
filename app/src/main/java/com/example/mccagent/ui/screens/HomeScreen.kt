@@ -45,8 +45,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mccagent.R
+import com.example.mccagent.config.ServiceConfig
 import com.example.mccagent.repository.ClientRepositoryImpl
 import com.example.mccagent.repository.MessageRepositoryImpl
+import com.example.mccagent.services.BatteryOptimizationHelper
 import com.example.mccagent.ui.components.CompanyCard
 import com.example.mccagent.ui.components.DialogRegistrarTelefono
 import com.example.mccagent.ui.components.PhonesList
@@ -73,7 +75,6 @@ fun HomeScreen(
 
     var menuExpanded by remember { mutableStateOf(false) }
     val mostrarDialogoNumero = remember { mutableStateOf(false) }
-
     val estadoServicio = remember { mutableStateOf("INACTIVO") }
     val ultimaConsulta = remember { mutableStateOf("Sin consulta") }
     val pendientes = remember { mutableStateOf(0) }
@@ -83,13 +84,8 @@ fun HomeScreen(
     val state by viewModel.clientState.collectAsState()
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
-    fun sincronizarAhora() {
-        SmsWorkScheduler.schedule(context)
-        val prefs = context.getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        estadoServicio.value = if (prefs.getBoolean("sms_service_running", false)) "ACTIVO" else "INACTIVO"
+    fun refrescarDatosLocales() {
         viewModel.loadClientInfo()
-        SmsWorkScheduler.ejecutarSincronizacionInmediata(context)
-
         scope.launch {
             try {
                 pendientes.value = MessageRepositoryImpl(context).getPendingMessages().size
@@ -98,16 +94,29 @@ fun HomeScreen(
                 errorSincronizacion.value = "No se pudo consultar pendientes"
                 Log.e("HomeScreen", "Error al refrescar pendientes", e)
             }
-
-            val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-            ultimaConsulta.value = formatter.format(Date())
+            refrescarEstado()
         }
+    }
+
+    fun refrescarEstado() {
+        estadoServicio.value = if (ServiceConfig.isServiceEnabled(context)) "ACTIVO" else "INACTIVO"
+        val ultima = ServiceConfig.getLastSyncEpochMs(context)
+        ultimaConsulta.value = if (ultima > 0) {
+            SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ultima))
+        } else {
+            "Sin consulta"
+        }
+    }
+
+    fun sincronizarAhora() {
+        SmsWorkScheduler.schedule(context)
+        SmsWorkScheduler.ejecutarSincronizacionInmediata(context)
+        refrescarDatosLocales()
     }
 
     LaunchedEffect(Unit) {
         SmsWorkScheduler.schedule(context)
-        estadoServicio.value = "ACTIVO"
-        sincronizarAhora()
+        refrescarDatosLocales()
     }
 
     Scaffold(
@@ -192,17 +201,38 @@ fun HomeScreen(
                 Text("SINCRONIZAR AHORA", color = MaterialTheme.colorScheme.onPrimary)
             }
 
+            OutlinedButton(
+                onClick = { BatteryOptimizationHelper.openSamsungBatterySettings(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("ABRIR AJUSTES DE BATERIA", color = RojoCorporativo)
+            }
+
             Text("Telefonos registrados", style = MaterialTheme.typography.titleMedium)
             PhonesList(dispositivos = state.devices, idActual = currentDeviceId)
 
             val deviceRegistered = state.devices.any { it.imei == currentDeviceId }
             if (!deviceRegistered) {
-                OutlinedButton(onClick = { mostrarDialogoNumero.value = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { mostrarDialogoNumero.value = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("REGISTRAR ESTE DISPOSITIVO", color = RojoCorporativo)
                 }
             }
+
+            val bateriaProtegida = BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+            Text(
+                text = if (bateriaProtegida) {
+                    "Optimizacion de bateria: excluida"
+                } else {
+                    "Optimizacion de bateria: todavia activa"
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
             Spacer(modifier = Modifier.height(12.dp))
         }
+
         if (mostrarDialogoNumero.value) {
             DialogRegistrarTelefono(
                 onDismiss = { mostrarDialogoNumero.value = false },
