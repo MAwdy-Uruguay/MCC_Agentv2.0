@@ -10,8 +10,8 @@ import com.example.mccagent.network.RetrofitClient
 
 class MessageRepositoryImpl(private val context: Context) : IMessageRepository {
 
-    private suspend fun getApi(): IApiService {
-        return RetrofitClient.getApiWithValidToken(context)
+    private fun getApi(): IApiService {
+        return RetrofitClient.getApiService(context)
     }
 
     override suspend fun getPendingMessages(): List<Message> {

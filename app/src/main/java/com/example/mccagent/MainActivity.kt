@@ -15,7 +15,6 @@ import com.example.mccagent.ui.theme.MCCAgentTheme
 import android.util.Log
 import com.example.mccagent.config.ApiConfig
 import com.example.mccagent.ui.navigation.AppNavigation
-import com.example.mccagent.utils.SecureSessionStorage
 
 class MainActivity : ComponentActivity() {
     private val permisos = arrayOf(
@@ -29,7 +28,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         ApiConfig.prefs = getSharedPreferences("mcc_prefs", Context.MODE_PRIVATE)
-        SecureSessionStorage.obtenerToken(this)
         requestPermissionsIfNeeded()
 
         setContent {

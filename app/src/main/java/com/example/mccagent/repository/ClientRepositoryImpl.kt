@@ -6,13 +6,13 @@ import com.example.mccagent.models.entities.Client
 import com.example.mccagent.models.entities.Device
 import com.example.mccagent.models.interfaces.IClientRepository
 import com.example.mccagent.models.interfaces.IApiService
-import com.example.mccagent.network.RetrofitClient.getApiWithValidToken
+import com.example.mccagent.network.RetrofitClient
 import retrofit2.Response
 
 class ClientRepositoryImpl(private val context: Context) : IClientRepository {
 
-    private suspend fun getApi(): IApiService {
-        return getApiWithValidToken(context)
+    private fun getApi(): IApiService {
+        return RetrofitClient.getApiService(context)
     }
 
     override suspend fun getClient(): Response<Client> {

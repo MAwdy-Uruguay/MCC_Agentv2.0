@@ -1,10 +1,7 @@
 package com.example.mccagent.models.interfaces
 
-import com.example.mccagent.data.AuthResponse
 import com.example.mccagent.data.ClientWithDevicesResponse
 import com.example.mccagent.data.DeviceRegisterRequest
-import com.example.mccagent.data.LoginRequest
-import com.example.mccagent.data.LoginResponse
 import com.example.mccagent.data.MessageListResponse
 import com.example.mccagent.data.MessageStatusUpdateRequest
 import com.example.mccagent.models.entities.Client
@@ -17,9 +14,6 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface IApiService {
-    @POST("auth/login")
-    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
-
     @GET("clients/me")
     suspend fun getClient(): Response<Client>
 
@@ -43,7 +37,4 @@ interface IApiService {
         @Path("id") messageId: String,
         @Body status: MessageStatusUpdateRequest,
     ): Response<Unit>
-
-    @GET("auth/renew")
-    suspend fun renewToken(): Response<AuthResponse>
 }

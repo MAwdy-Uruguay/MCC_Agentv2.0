@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -31,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,14 +66,12 @@ import java.util.Locale
 fun HomeScreen(
     onSettings: () -> Unit,
     onMessages: () -> Unit,
-    onRealTime: () -> Unit,
-    onLogout: () -> Unit
+    onRealTime: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: ClientViewModel = viewModel(factory = ClientViewModelFactory(ClientRepositoryImpl(context)))
 
     var menuExpanded by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
     val mostrarDialogoNumero = remember { mutableStateOf(false) }
 
     val estadoServicio = remember { mutableStateOf("INACTIVO") }
@@ -157,13 +153,6 @@ fun HomeScreen(
                                 onSettings()
                             }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Cerrar sesion") },
-                            onClick = {
-                                menuExpanded = false
-                                showLogoutDialog = true
-                            }
-                        )
                     }
                 }
             )
@@ -214,28 +203,6 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
-
-        if (showLogoutDialog) {
-            AlertDialog(
-                onDismissRequest = { showLogoutDialog = false },
-                title = { Text("Cerrar sesion?") },
-                text = { Text("Deseas cerrar sesion y detener el servicio de mensajeria?") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showLogoutDialog = false
-                        onLogout()
-                    }) {
-                        Text("Si, cerrar", color = RojoCorporativo)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showLogoutDialog = false }) {
-                        Text("Cancelar")
-                    }
-                }
-            )
-        }
-
         if (mostrarDialogoNumero.value) {
             DialogRegistrarTelefono(
                 onDismiss = { mostrarDialogoNumero.value = false },

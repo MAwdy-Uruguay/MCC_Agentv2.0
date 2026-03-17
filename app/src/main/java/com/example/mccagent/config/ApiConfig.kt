@@ -2,6 +2,7 @@ package com.example.mccagent.config
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.mccagent.BuildConfig
 
 object ApiConfig {
     private const val PREFS_NAME = "mcc_prefs"
@@ -40,5 +41,16 @@ object ApiConfig {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return Environment.fromRaw(prefs.getString("env", Environment.DEV.rawValue))
     }
+
+    fun getApiKey(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString("api_key", BuildConfig.API_KEY) ?: BuildConfig.API_KEY
+    }
+
+    fun getApiKeyHeader(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString("api_key_header", BuildConfig.API_KEY_HEADER) ?: BuildConfig.API_KEY_HEADER
+    }
+
     var prefs: SharedPreferences? = null
 }

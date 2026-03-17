@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val apiKey = providers.gradleProperty("MCC_API_KEY")
+    .orElse(providers.environmentVariable("MCC_API_KEY"))
+    .orElse("")
+    .get()
+
+val apiKeyHeader = providers.gradleProperty("MCC_API_KEY_HEADER")
+    .orElse(providers.environmentVariable("MCC_API_KEY_HEADER"))
+    .orElse("x-api-key")
+    .get()
+
 android {
     namespace = "com.example.mccagent"
     compileSdk = 35
@@ -16,6 +26,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
+        buildConfigField("String", "API_KEY_HEADER", "\"$apiKeyHeader\"")
     }
 
     flavorDimensions += "entorno"
