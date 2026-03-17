@@ -84,6 +84,16 @@ fun HomeScreen(
     val state by viewModel.clientState.collectAsState()
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
+    fun refrescarEstado() {
+        estadoServicio.value = if (ServiceConfig.isServiceEnabled(context)) "ACTIVO" else "INACTIVO"
+        val ultima = ServiceConfig.getLastSyncEpochMs(context)
+        ultimaConsulta.value = if (ultima > 0) {
+            SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ultima))
+        } else {
+            "Sin consulta"
+        }
+    }
+
     fun refrescarDatosLocales() {
         viewModel.loadClientInfo()
         scope.launch {
@@ -95,16 +105,6 @@ fun HomeScreen(
                 Log.e("HomeScreen", "Error al refrescar pendientes", e)
             }
             refrescarEstado()
-        }
-    }
-
-    fun refrescarEstado() {
-        estadoServicio.value = if (ServiceConfig.isServiceEnabled(context)) "ACTIVO" else "INACTIVO"
-        val ultima = ServiceConfig.getLastSyncEpochMs(context)
-        ultimaConsulta.value = if (ultima > 0) {
-            SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ultima))
-        } else {
-            "Sin consulta"
         }
     }
 
