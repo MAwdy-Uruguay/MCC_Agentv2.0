@@ -2,6 +2,8 @@ package com.example.mccagent.ui.screens
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -78,6 +81,7 @@ fun SettingsScreen(navController: NavController, context: Context) {
     val preprodUrlError = preprodUrl.isNotBlank() && !isValidUrl(preprodUrl)
     val devUrlError = devUrl.isNotBlank() && !isValidUrl(devUrl)
     val hasAnyError = prodUrlError || preprodUrlError || devUrlError
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -94,8 +98,9 @@ fun SettingsScreen(navController: NavController, context: Context) {
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(24.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
@@ -150,6 +155,10 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
             Spacer(Modifier.height(24.dp))
 
+            HorizontalDivider()
+
+            Spacer(Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = apiKeyHeader,
                 onValueChange = { apiKeyHeader = it },
@@ -170,6 +179,10 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
             Spacer(Modifier.height(24.dp))
 
+            HorizontalDivider()
+
+            Spacer(Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -184,7 +197,14 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
             Spacer(Modifier.height(8.dp))
 
-            Text("Volumen del bip: ${heartbeatVolume.toInt()}%", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "Volumen del bip de monitoreo: ${heartbeatVolume.toInt()}%",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                "Este deslizador controla cuan tenue o fuerte suena el bip que se reproduce en cada consulta.",
+                style = MaterialTheme.typography.bodySmall
+            )
             Slider(
                 value = heartbeatVolume,
                 onValueChange = { heartbeatVolume = it },
@@ -252,6 +272,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
             ) {
                 Text("Guardar configuracion")
             }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
