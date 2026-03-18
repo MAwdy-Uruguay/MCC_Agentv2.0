@@ -66,6 +66,51 @@ fun CompanyCard(nombreEmpresa: String, subtitulo: String) {
 }
 
 @Composable
+fun ClientIdentityCard(
+    clientId: String,
+    nombreEmpresa: String,
+    contacto: String,
+    telefono: String,
+    estadoActivo: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = FondoTarjetaSuave),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Cliente validado",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextoPrincipal
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = nombreEmpresa.ifBlank { "Sin nombre de cliente" },
+                style = MaterialTheme.typography.titleMedium,
+                color = TextoPrincipal,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (clientId.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("ID: $clientId", color = TextoPrincipal, style = MaterialTheme.typography.bodySmall)
+            }
+            if (contacto.isNotBlank()) {
+                Text("Contacto: $contacto", color = TextoPrincipal, style = MaterialTheme.typography.bodySmall)
+            }
+            if (telefono.isNotBlank()) {
+                Text("Telefono: $telefono", color = TextoPrincipal, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                "Estado: ${if (estadoActivo) "Activo" else "Inactivo"}",
+                color = TextoPrincipal,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
 fun PhonesList(dispositivos: List<Device>, idActual: String) {
     if (dispositivos.isEmpty()) {
         Text("No hay telefonos registrados.", color = TextoPrincipal, style = MaterialTheme.typography.bodyMedium)

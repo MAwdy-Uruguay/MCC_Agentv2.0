@@ -12,6 +12,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
+import java.util.Locale
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
@@ -35,11 +36,7 @@ object RetrofitClient {
             }
         }
 
-        val certResId = when (currentEnv) {
-            ApiConfig.Environment.DEV -> R.raw.dev_cert
-            ApiConfig.Environment.PREPROD -> R.raw.mccserverca
-            ApiConfig.Environment.PROD -> R.raw.mccserverca
-        }
+        val certResIds = resolveCertificates(currentEnv, baseUrl)
 
         val clientBuilder = OkHttpClient.Builder()
             .addInterceptor(logging)
@@ -57,22 +54,24 @@ object RetrofitClient {
         }
 
         val cf = CertificateFactory.getInstance("X.509")
-        context.resources.openRawResource(certResId).use { caInput ->
-            val ca = cf.generateCertificate(caInput)
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        keyStore.load(null, null)
 
-            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-            keyStore.load(null, null)
-            keyStore.setCertificateEntry("papu_ca", ca)
-
-            val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            tmf.init(keyStore)
-            val trustManager = tmf.trustManagers[0] as X509TrustManager
-
-            val sslContext = SSLContext.getInstance("TLS")
-            sslContext.init(null, arrayOf(trustManager), null)
-
-            clientBuilder.sslSocketFactory(sslContext.socketFactory, trustManager)
+        certResIds.forEachIndexed { index, certResId ->
+            context.resources.openRawResource(certResId).use { caInput ->
+                val ca = cf.generateCertificate(caInput)
+                keyStore.setCertificateEntry("mcc_ca_$index", ca)
+            }
         }
+
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        tmf.init(keyStore)
+        val trustManager = tmf.trustManagers[0] as X509TrustManager
+
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(null, arrayOf(trustManager), null)
+
+        clientBuilder.sslSocketFactory(sslContext.socketFactory, trustManager)
 
         return Retrofit.Builder()
             .baseUrl(baseUrl)
@@ -80,5 +79,25 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(IApiService::class.java)
+    }
+
+    private fun resolveCertificates(
+        env: ApiConfig.Environment,
+        baseUrl: String,
+    ): List<Int> {
+        val normalizedUrl = baseUrl.lowercase(Locale.ROOT)
+        val isLocalhost = normalizedUrl.contains("localhost") || normalizedUrl.contains("127.0.0.1")
+
+        return when (env) {
+            ApiConfig.Environment.DEV -> {
+                if (isLocalhost) {
+                    listOf(R.raw.dev_cert)
+                } else {
+                    listOf(R.raw.mccserverca, R.raw.mccserversubca)
+                }
+            }
+            ApiConfig.Environment.PREPROD,
+            ApiConfig.Environment.PROD -> listOf(R.raw.mccserverca, R.raw.mccserversubca)
+        }
     }
 }

@@ -49,7 +49,7 @@ import com.example.mccagent.config.ServiceConfig
 import com.example.mccagent.repository.ClientRepositoryImpl
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.services.BatteryOptimizationHelper
-import com.example.mccagent.ui.components.CompanyCard
+import com.example.mccagent.ui.components.ClientIdentityCard
 import com.example.mccagent.ui.components.DialogRegistrarTelefono
 import com.example.mccagent.ui.components.PhonesList
 import com.example.mccagent.ui.components.SystemFooterStatus
@@ -85,7 +85,12 @@ fun HomeScreen(
     val currentDeviceId = remember { getCurrentDeviceId(context) }
 
     fun refrescarEstado() {
-        estadoServicio.value = if (ServiceConfig.isServiceEnabled(context)) "ACTIVO" else "INACTIVO"
+        estadoServicio.value = when (ServiceConfig.getHealthState(context)) {
+            ServiceConfig.HealthState.OK -> "ACTIVO"
+            ServiceConfig.HealthState.DEGRADED -> "DEGRADADO"
+            ServiceConfig.HealthState.ERROR -> "ERROR"
+            ServiceConfig.HealthState.UNKNOWN -> if (ServiceConfig.isServiceEnabled(context)) "INICIANDO" else "INACTIVO"
+        }
         val ultima = ServiceConfig.getLastSyncEpochMs(context)
         ultimaConsulta.value = if (ultima > 0) {
             SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ultima))
@@ -168,10 +173,12 @@ fun HomeScreen(
         },
         bottomBar = {
             SystemFooterStatus(
-                estadoServicio = if (state.error != null) "ERROR" else estadoServicio.value,
+                estadoServicio = estadoServicio.value,
                 pendientes = pendientes.value,
                 ultimaConsulta = ultimaConsulta.value,
-                error = state.error ?: errorSincronizacion.value
+                error = ServiceConfig.getHealthMessage(context).ifBlank {
+                    state.error ?: errorSincronizacion.value.orEmpty()
+                }
             )
         },
         containerColor = FondoBlanco
@@ -186,10 +193,15 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
-            CompanyCard(
-                nombreEmpresa = state.clientName,
-                subtitulo = "SMS Payment Link Gateway"
-            )
+            if (state.clientName.isNotBlank() || state.clientContact.isNotBlank()) {
+                ClientIdentityCard(
+                    clientId = state.clientId,
+                    nombreEmpresa = state.clientName,
+                    contacto = state.clientContact,
+                    telefono = state.clientPhone,
+                    estadoActivo = state.clientStatus
+                )
+            }
 
             Button(
                 onClick = { sincronizarAhora() },
@@ -199,13 +211,6 @@ fun HomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = RojoCorporativo)
             ) {
                 Text("SINCRONIZAR AHORA", color = MaterialTheme.colorScheme.onPrimary)
-            }
-
-            OutlinedButton(
-                onClick = { BatteryOptimizationHelper.openSamsungBatterySettings(context) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("ABRIR AJUSTES DE BATERIA", color = RojoCorporativo)
             }
 
             Text("Telefonos registrados", style = MaterialTheme.typography.titleMedium)

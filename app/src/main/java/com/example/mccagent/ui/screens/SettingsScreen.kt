@@ -55,6 +55,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
     var selectedEnv by remember { mutableStateOf(ApiConfig.Environment.DEV) }
     var heartbeatEnabled by remember { mutableStateOf(true) }
     var heartbeatVolume by remember { mutableFloatStateOf(15f) }
+    var alertsEnabled by remember { mutableStateOf(false) }
+    var alertPhone by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         prodUrl = prefs.getString("url_prod", "") ?: ""
@@ -68,6 +70,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
         )
         heartbeatEnabled = ServiceConfig.isHeartbeatEnabled(context)
         heartbeatVolume = ServiceConfig.getHeartbeatVolume(context).toFloat()
+        alertsEnabled = ServiceConfig.areAlertsEnabled(context)
+        alertPhone = ServiceConfig.normalizeAlertPhone(ServiceConfig.getAlertPhone(context))
     }
 
     fun isValidUrl(value: String): Boolean {
@@ -213,6 +217,38 @@ fun SettingsScreen(navController: NavController, context: Context) {
 
             Spacer(Modifier.height(12.dp))
 
+            HorizontalDivider()
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Alertas SMS operativas", style = MaterialTheme.typography.bodyLarge)
+                Switch(
+                    checked = alertsEnabled,
+                    onCheckedChange = { alertsEnabled = it }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = alertPhone,
+                onValueChange = { alertPhone = it },
+                label = { Text("Numero movil de alerta") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Text(
+                "Acepta 095... o +598... y se guarda normalizado como +598...",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             Button(
                 onClick = { BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context) },
                 modifier = Modifier.fillMaxWidth()
@@ -265,6 +301,8 @@ fun SettingsScreen(navController: NavController, context: Context) {
                         .commit()
                     ServiceConfig.setHeartbeatEnabled(context, heartbeatEnabled)
                     ServiceConfig.setHeartbeatVolume(context, heartbeatVolume.toInt())
+                    ServiceConfig.setAlertsEnabled(context, alertsEnabled)
+                    ServiceConfig.setAlertPhone(context, alertPhone)
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth(),

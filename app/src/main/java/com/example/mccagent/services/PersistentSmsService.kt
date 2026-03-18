@@ -84,6 +84,8 @@ class PersistentSmsService : Service() {
     private suspend fun runSyncCycle() {
         syncMutex.withLock {
             val result = SmsSyncEngine.runCycle(this, playHeartbeat = true)
+            val healthState = ServiceHealthManager.processSyncResult(this, result)
+            HeartbeatPlayer.playForState(this, healthState)
             currentStatus = buildStatusText(result)
             updateNotification(currentStatus)
         }
@@ -91,10 +93,11 @@ class PersistentSmsService : Service() {
 
     private fun buildStatusText(result: SyncResult): String {
         val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        return if (result.success) {
-            "Activo. Ultima consulta $hora. Pendientes: ${result.pendingCount}"
-        } else {
-            "Reintentando. Ultima falla $hora: ${result.message}"
+        return when (ServiceConfig.getHealthState(this)) {
+            ServiceConfig.HealthState.OK -> "Activo. Ultima consulta $hora. Pendientes: ${result.pendingCount}"
+            ServiceConfig.HealthState.DEGRADED -> "Atencion. Reintentos detectados $hora: ${result.message}"
+            ServiceConfig.HealthState.ERROR -> "Error operativo $hora: ${result.message}"
+            ServiceConfig.HealthState.UNKNOWN -> "Inicializando monitoreo"
         }
     }
 

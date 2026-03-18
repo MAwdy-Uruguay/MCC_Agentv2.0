@@ -1,10 +1,7 @@
 package com.example.mccagent.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mccagent.repository.ClientRepositoryImpl
-import com.example.mccagent.models.entities.Device
 import com.example.mccagent.models.interfaces.IClientRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,10 +22,13 @@ class ClientViewModel(private val repository: IClientRepository) : ViewModel() {
                     val client = clientResponse.body()!!.client
                     _clientState.value = ClientState(
                         isLoading = false,
-                        clientName = client.name,
-                        clientContact = client.contact_Email,
-                        clientStatus = client.status,
-                        devices = client.devices
+                        clientId = client.cid.orEmpty(),
+                        clientName = client.name.orEmpty(),
+                        clientContact = client.contact_Email.orEmpty(),
+                        clientPhone = client.phone.orEmpty(),
+                        clientAddress = client.address.orEmpty(),
+                        clientStatus = client.active ?: (client.status == true),
+                        devices = client.devices.orEmpty()
                     )
                 } else {
                     val errorMessage = when (clientResponse.code()) {

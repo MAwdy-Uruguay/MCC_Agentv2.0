@@ -10,6 +10,7 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.mccagent.config.ServiceConfig
+import com.example.mccagent.repository.ClientRepositoryImpl
 import com.example.mccagent.repository.MessageRepositoryImpl
 import com.example.mccagent.utils.SmsCorrelationKeyFactory
 import kotlinx.coroutines.delay
@@ -35,11 +36,17 @@ object SmsSyncEngine {
             return SyncResult(false, "Permiso SEND_SMS no concedido")
         }
 
-        if (playHeartbeat) {
-            HeartbeatPlayer.playIfEnabled(context)
-        }
-
         return try {
+            val clientRepository = ClientRepositoryImpl(context)
+            val clientHealthResponse = clientRepository.getClient()
+            if (!clientHealthResponse.isSuccessful) {
+                return SyncResult(
+                    success = false,
+                    message = "Error validando cliente/API: HTTP ${clientHealthResponse.code()}",
+                    pendingCount = 0
+                )
+            }
+
             val repository = MessageRepositoryImpl(context)
             val messages = repository.getPendingMessages()
             Log.d("SmsSyncEngine", "Mensajes pendientes recibidos: ${messages.size}")
