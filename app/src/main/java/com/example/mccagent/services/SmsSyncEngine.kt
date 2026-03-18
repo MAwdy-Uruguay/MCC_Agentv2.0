@@ -38,8 +38,8 @@ object SmsSyncEngine {
 
         return try {
             val clientRepository = ClientRepositoryImpl(context)
-            val clientHealthResponse = clientRepository.getClient()
-            if (!clientHealthResponse.isSuccessful) {
+            val clientHealthResponse = clientRepository.getClientWithDevices()
+            if (!clientHealthResponse.isSuccessful || clientHealthResponse.body()?.ok != true) {
                 return SyncResult(
                     success = false,
                     message = "Error validando cliente/API: HTTP ${clientHealthResponse.code()}",
