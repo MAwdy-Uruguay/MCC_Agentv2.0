@@ -58,6 +58,7 @@ import com.example.mccagent.ui.theme.RojoCorporativo
 import com.example.mccagent.viewmodels.ClientViewModel
 import com.example.mccagent.viewmodels.ClientViewModelFactory
 import com.example.mccagent.workers.SmsWorkScheduler
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -79,6 +80,7 @@ fun HomeScreen(
     val ultimaConsulta = remember { mutableStateOf("Sin consulta") }
     val pendientes = remember { mutableStateOf(0) }
     val errorSincronizacion = remember { mutableStateOf<String?>(null) }
+    val mensajeEstado = remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     val state by viewModel.clientState.collectAsState()
@@ -91,6 +93,7 @@ fun HomeScreen(
             ServiceConfig.HealthState.ERROR -> "ERROR"
             ServiceConfig.HealthState.UNKNOWN -> if (ServiceConfig.isServiceEnabled(context)) "INICIANDO" else "INACTIVO"
         }
+        mensajeEstado.value = ServiceConfig.getHealthMessage(context)
         val ultima = ServiceConfig.getLastSyncEpochMs(context)
         ultimaConsulta.value = if (ultima > 0) {
             SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ultima))
@@ -122,6 +125,13 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         SmsWorkScheduler.schedule(context)
         refrescarDatosLocales()
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            refrescarEstado()
+            delay(2000)
+        }
     }
 
     Scaffold(
@@ -176,7 +186,7 @@ fun HomeScreen(
                 estadoServicio = estadoServicio.value,
                 pendientes = pendientes.value,
                 ultimaConsulta = ultimaConsulta.value,
-                error = ServiceConfig.getHealthMessage(context).ifBlank {
+                error = mensajeEstado.value.ifBlank {
                     state.error ?: errorSincronizacion.value.orEmpty()
                 }
             )
